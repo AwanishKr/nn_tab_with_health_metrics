@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regional Data Cartography — Fraud Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #06080d;
+  --s1:     #0c0f18;
+  --s2:     #111520;
+  --s3:     #181d2c;
+  --bd:     #1f2640;
+  --bd2:    #283050;
+  --text:   #d6e2f2;
+  --muted:  #556080;
+  --faint:  #0f1320;
+  --easy:   #4df5c8;
+  --mild:   #68b8ff;
+  --hard:   #f0b840;
+  --vhard:  #f06868;
+  --rare:   #c084ff;
+  --noisy:  #ff4f7a;
+  --redund: #5a7090;
+  --accent: #4df5c8;
+  --serif:  'Fraunces', Georgia, serif;
+  --mono:   'JetBrains Mono', monospace;
+  --sans:   'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-weight: 400; line-height: 1.7;
+  overflow-x: hidden; min-height: 100vh;
+}
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999; opacity:.018;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.page { max-width: 1280px; margin: 0 auto; padding: 0 2rem 8rem; }
+
+/* ── HERO ── */
+.hero { padding: 5rem 0 4rem; position: relative; }
+.hero-glow {
+  position:absolute; top:-80px; left:50%; transform:translateX(-50%);
+  width:1000px; height:400px; pointer-events:none;
+  background: radial-gradient(ellipse, rgba(77,245,200,.06) 0%, rgba(104,184,255,.03) 50%, transparent 70%);
+}
+.eyebrow {
+  display:inline-flex; align-items:center; gap:.7rem;
+  font-family:var(--mono); font-size:.58rem; letter-spacing:.28em; color:var(--accent);
+  text-transform:uppercase; border:1px solid rgba(77,245,200,.2);
+  padding:.4rem 1rem; border-radius:2px; margin-bottom:2rem;
+}
+.eyebrow-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+h1 {
+  font-family:var(--serif); font-size:clamp(2.4rem,5.5vw,4.2rem);
+  font-weight:700; line-height:1.02; letter-spacing:-.03em; margin-bottom:1rem;
+}
+h1 em { font-style:italic; color:var(--accent); }
+.hero-sub { max-width:700px; color:var(--muted); font-size:.95rem; margin-bottom:2.5rem; }
+
+/* ── GLOBAL SUMMARY BAR ── */
+.global-bar {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:1px;
+  background:var(--bd); border:1px solid var(--bd); border-radius:4px;
+  overflow:hidden; margin-bottom:4rem;
+}
+.gbar-cell {
+  background:var(--s1); padding:1.2rem 1.4rem; text-align:center;
+}
+.gbar-val { font-family:var(--mono); font-size:1.5rem; font-weight:500; }
+.gbar-lbl { font-family:var(--mono); font-size:.52rem; letter-spacing:.15em; color:var(--muted); margin-top:.3rem; text-transform:uppercase; }
+
+/* ── NAV TABS ── */
+.region-nav {
+  display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:2.5rem;
+  border-bottom:1px solid var(--bd); padding-bottom:1.2rem;
+}
+.rtab {
+  font-family:var(--mono); font-size:.6rem; letter-spacing:.06em;
+  padding:.5rem 1.2rem; border:1px solid var(--bd); border-radius:3px;
+  background:transparent; color:var(--muted); cursor:pointer;
+  transition:all .18s; position:relative;
+}
+.rtab:hover { color:var(--text); border-color:var(--bd2); background:var(--s1); }
+.rtab.active {
+  color:var(--accent); border-color:var(--accent);
+  background:rgba(77,245,200,.06);
+}
+.rtab .quality-dot {
+  display:inline-block; width:5px; height:5px; border-radius:50%;
+  margin-left:.6rem; vertical-align:middle;
+}
+
+/* ── REGION PANEL ── */
+.region-panel { display:none; }
+.region-panel.active { display:block; }
+
+.region-header {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  margin-bottom:2rem; flex-wrap:wrap; gap:1rem;
+}
+.region-title { font-family:var(--serif); font-size:clamp(1.6rem,3vw,2.2rem); font-weight:700; letter-spacing:-.02em; }
+.region-title em { font-style:italic; color:var(--accent); }
+.region-meta { font-family:var(--mono); font-size:.58rem; color:var(--muted); letter-spacing:.1em; margin-top:.4rem; }
+
+.region-stats {
+  display:flex; gap:.6rem; flex-wrap:wrap; align-items:flex-start;
+}
+.rstat {
+  font-family:var(--mono); font-size:.56rem; letter-spacing:.05em;
+  padding:.3rem .8rem; border-radius:2px; border:1px solid; white-space:nowrap;
+}
+
+/* ── MAIN GRID ── */
+.main-grid {
+  display:grid; grid-template-columns:1fr 360px; gap:1.5rem; margin-bottom:1.5rem;
+}
+@media(max-width:900px) { .main-grid { grid-template-columns:1fr; } }
+
+/* ── SCATTER CARD ── */
+.scatter-card {
+  background:var(--s1); border:1px solid var(--bd); border-radius:4px; overflow:hidden;
+}
+.card-head {
+  font-family:var(--mono); font-size:.56rem; letter-spacing:.18em; color:var(--muted);
+  text-transform:uppercase; padding:1rem 1.4rem; border-bottom:1px solid var(--bd);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.scatter-wrap { position:relative; padding:1.2rem 1rem 1.4rem; }
+svg.scatter { width:100%; height:420px; display:block; }
+
+.axis-label {
+  font-family:var(--mono); font-size:9px; fill:var(--muted); letter-spacing:.08em;
+}
+.grid-line { stroke:var(--bd); stroke-width:1; }
+.zone-label { font-family:var(--mono); font-size:8px; fill:rgba(255,255,255,.12); letter-spacing:.06em; }
+
+/* tooltip */
+.scatter-tooltip {
+  position:absolute; pointer-events:none; opacity:0; transition:opacity .12s;
+  background:rgba(6,8,13,.96); border:1px solid var(--bd2); border-radius:3px;
+  padding:.6rem .9rem; font-family:var(--mono); font-size:.58rem; color:var(--text);
+  min-width:180px; z-index:100; line-height:1.8;
+}
+.tt-cat { font-weight:500; margin-bottom:.2rem; }
+
+/* ── LEGEND ── */
+.legend-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:.35rem;
+  padding:1rem 1.4rem 1.2rem;
+}
+.legend-item {
+  display:flex; align-items:center; gap:.6rem;
+  font-family:var(--mono); font-size:.58rem; color:var(--muted); cursor:pointer;
+  padding:.25rem; border-radius:2px; transition:color .15s;
+}
+.legend-item:hover { color:var(--text); }
+.legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.legend-count { margin-left:auto; opacity:.6; }
+
+/* ── RIGHT COLUMN ── */
+.right-col { display:flex; flex-direction:column; gap:1.5rem; }
+
+/* ── QUALITY CARD ── */
+.quality-card {
+  background:var(--s1); border:1px solid var(--bd); border-radius:4px;
+}
+.quality-body { padding:1.2rem 1.4rem; }
+.donut-wrap { display:flex; align-items:center; gap:1.4rem; margin-bottom:1rem; }
+svg.donut { width:100px; height:100px; flex-shrink:0; }
+.donut-center { font-family:var(--mono); }
+.donut-pct { font-size:1.3rem; font-weight:500; }
+.donut-sub { font-size:.5rem; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; }
+.donut-legend { flex:1; }
+.dl-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; font-family:var(--mono); font-size:.56rem; }
+.dl-label { color:var(--muted); display:flex; align-items:center; gap:.5rem; }
+.dl-dot { width:6px; height:6px; border-radius:50%; }
+.dl-val { font-weight:500; }
+
+/* ── QUALITY SCORE BAR ── */
+.quality-bar-wrap { margin-top:.8rem; }
+.qbar-track { background:var(--s3); border-radius:2px; height:6px; overflow:hidden; margin-top:.35rem; }
+.qbar-fill { height:100%; border-radius:2px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+.qbar-row { display:flex; justify-content:space-between; font-family:var(--mono); font-size:.52rem; color:var(--muted); margin-bottom:.25rem; }
+
+/* ── COMPOSITION BAR ── */
+.comp-bar { height:12px; border-radius:2px; overflow:hidden; display:flex; margin:1rem 0 .6rem; }
+.comp-seg { height:100%; transition:width .8s; }
+.comp-legend { display:flex; flex-wrap:wrap; gap:.4rem; }
+.comp-item { font-family:var(--mono); font-size:.52rem; color:var(--muted); display:flex; align-items:center; gap:.35rem; }
+.comp-dot { width:5px; height:5px; border-radius:50%; }
+
+/* ── STRATEGY CARD ── */
+.strategy-card {
+  background:var(--s1); border:1px solid var(--bd); border-radius:4px; overflow:hidden;
+}
+.strategy-body { padding:1.3rem 1.5rem; }
+.verdict-row {
+  display:flex; align-items:center; gap:.8rem; margin-bottom:1rem;
+  padding-bottom:1rem; border-bottom:1px solid var(--bd);
+}
+.verdict-badge {
+  font-family:var(--mono); font-size:.56rem; letter-spacing:.1em;
+  padding:.35rem .8rem; border-radius:2px; text-transform:uppercase; border:1px solid;
+  white-space:nowrap;
+}
+.verdict-text { font-family:var(--mono); font-size:.62rem; color:var(--text); font-weight:500; }
+
+.action-list { list-style:none; }
+.action-item {
+  display:flex; gap:.8rem; align-items:flex-start;
+  padding:.65rem 0; border-bottom:1px solid rgba(31,38,64,.5);
+  font-size:.86rem; color:#7888a8; line-height:1.55;
+}
+.action-item:last-child { border-bottom:none; padding-bottom:0; }
+.action-icon { font-family:var(--mono); font-size:.62rem; font-weight:500; flex-shrink:0; margin-top:.1rem; }
+.action-item strong { color:var(--text); font-weight:500; }
+
+/* ── REGION COMPARISON ── */
+.comparison-section { margin-top:3rem; }
+.comp-section-title { font-family:var(--serif); font-size:1.4rem; font-weight:700; letter-spacing:-.02em; margin-bottom:1.2rem; }
+.comp-section-title em { font-style:italic; color:var(--accent); }
+.comp-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--bd); border:1px solid var(--bd); border-radius:4px; overflow:hidden; }
+@media(max-width:900px) { .comp-grid { grid-template-columns:repeat(2,1fr); } }
+.comp-cell { background:var(--s1); padding:1.2rem 1.3rem; }
+.comp-region { font-family:var(--mono); font-size:.56rem; letter-spacing:.14em; color:var(--muted); text-transform:uppercase; margin-bottom:.7rem; }
+.comp-metric { margin-bottom:.7rem; }
+.comp-metric-lbl { font-family:var(--mono); font-size:.5rem; letter-spacing:.1em; color:var(--muted); margin-bottom:.25rem; text-transform:uppercase; }
+.comp-mini-bar { display:flex; height:6px; border-radius:2px; overflow:hidden; gap:0; }
+.comp-mini-seg { height:100%; }
+.comp-metric-val { font-family:var(--mono); font-size:.78rem; margin-top:.3rem; font-weight:500; }
+.comp-overall { margin-top:.5rem; padding-top:.7rem; border-top:1px solid var(--bd); }
+.comp-grade { font-family:var(--mono); font-size:.55rem; letter-spacing:.08em; padding:.25rem .6rem; border-radius:2px; border:1px solid; display:inline-block; }
+
+/* ── FOOTER ── */
+.footer { text-align:center; padding:3rem 0 1rem; font-family:var(--mono); font-size:.52rem; letter-spacing:.2em; color:var(--bd2); text-transform:uppercase; }
+
+/* ── SECTION DIVIDER ── */
+.divider { border:none; border-top:1px solid var(--bd); margin:3rem 0; position:relative; }
+.divider::after { content:'◆'; position:absolute; top:-.65rem; left:50%; transform:translateX(-50%); background:var(--bg); padding:0 1rem; color:var(--bd2); font-size:.65rem; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="eyebrow"><div class="eyebrow-dot"></div>Fraud Detection · Data Cartography Dashboard</div>
+
+  <!-- NOTICE BANNER -->
+  <div style="
+    border: 1px solid rgba(104,184,255,.25);
+    background: rgba(104,184,255,.04);
+    border-radius: 4px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 2.4rem;
+    display: flex;
+    gap: 1.2rem;
+    align-items: flex-start;
+  ">
+    <div style="font-family:var(--mono);font-size:.75rem;color:#68b8ff;flex-shrink:0;margin-top:.05rem">ℹ</div>
+    <div>
+      <div style="font-family:var(--mono);font-size:.6rem;letter-spacing:.15em;color:#68b8ff;text-transform:uppercase;margin-bottom:.45rem">Hypothetical Data — For Illustrative Purposes Only</div>
+      <p style="color:#7888a8;font-size:.88rem;margin-bottom:.5rem">
+        All metrics, percentages, sample counts, and cartography maps shown in this document are
+        <strong style="color:var(--text)">simulated and hypothetical</strong>. They are intended to demonstrate the structure and interpretive
+        framework of the Data Cartography methodology — not to reflect any real training dataset. An
+        <strong style="color:var(--text)">identical report with live numbers</strong> can be produced once the training experiments are executed
+        and the metrics pipeline has processed the results.
+      </p>
+      <p style="color:#7888a8;font-size:.88rem;margin:0">
+        Our <strong style="color:var(--text)">Dataset Cartography code repository is already built</strong> and ready to run. It instruments any
+        training loop to record per-sample confidence and variability across epochs, then generates this
+        exact report — covering <strong style="color:var(--text)">every product across SSO</strong>, with a global view of data quality,
+        label noise, and sample difficulty broken down by region. Running the pipeline end-to-end
+        will replace every number on this page with ground-truth cartography from your actual training data.
+      </p>
+    </div>
+  </div>
+
+  <h1>Regional <em>Training Data</em><br>Cartography Map</h1>
+  <p class="hero-sub">
+    Dataset quality landscape across global regions. Each point is one training sample, plotted by
+    model confidence (x-axis) vs. variability across epochs (y-axis). Zones reveal easy, hard,
+    rare, and noisy samples — the raw material your classifier learns from.
+  </p>
+</section>
+
+<!-- REGIONAL SUMMARY BAR -->
+<div style="font-family:var(--mono);font-size:.52rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:.5rem" id="barRegionLabel">—</div>
+<div class="global-bar" id="globalBar">
+  <div class="gbar-cell"><div class="gbar-val" style="color:var(--accent)" id="gbTotal">—</div><div class="gbar-lbl">Region Samples</div></div>
+  <div class="gbar-cell"><div class="gbar-val" style="color:var(--noisy)" id="gbNoisy">—</div><div class="gbar-lbl">Noisy Labels</div></div>
+  <div class="gbar-cell"><div class="gbar-val" style="color:var(--rare)" id="gbRare">—</div><div class="gbar-lbl">Rare Patterns</div></div>
+  <div class="gbar-cell"><div class="gbar-val" style="color:var(--easy)" id="gbEasy">—</div><div class="gbar-lbl">Easy + Mild</div></div>
+  <div class="gbar-cell"><div class="gbar-val" style="color:var(--hard)" id="gbHard">—</div><div class="gbar-lbl">Hard + Very Hard</div></div>
+</div>
+
+<!-- REGION TABS -->
+<div class="region-nav" id="regionNav"></div>
+
+<!-- ALL PANELS (Overall + Region panels rendered by JS) -->
+<div id="regionPanels"></div>
+<div id="overallPanel" class="region-panel"></div>
+
+<div class="footer">Data Cartography — Regional Training Map · Fraud Detection · v2.0</div>
+
+</div><!-- .page -->
+
+<div class="scatter-tooltip" id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+
+const CATS = {
+  easy:    { label:'Easy',        color:'#4df5c8', desc:'Consistently correct, high confidence' },
+  mild:    { label:'Mild',        color:'#68b8ff', desc:'Mostly correct, moderate confidence' },
+  hard:    { label:'Hard',        color:'#f0b840', desc:'Boundary samples, model uncertain' },
+  vhard:   { label:'Very Hard',   color:'#f06868', desc:'Frequently misclassified, volatile' },
+  rare:    { label:'Rare',        color:'#c084ff', desc:'Sparse patterns, low kNN density' },
+  noisy:   { label:'Noisy Label', color:'#ff4f7a', desc:'Likely mislabelled, low AUM' },
+  redund:  { label:'Redundant',   color:'#5a7090', desc:'Over-represented easy samples' },
+};
+
+// Seeded RNG for deterministic output
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+function genPoints(seed, counts, spread) {
+  const rng = mulberry32(seed);
+  const pts = [];
+  const centers = {
+    easy:   { cx: 0.82, cy: 0.08, sx: 0.07, sy: 0.06 },
+    mild:   { cx: 0.65, cy: 0.18, sx: 0.10, sy: 0.09 },
+    hard:   { cx: 0.50, cy: 0.32, sx: 0.12, sy: 0.10 },
+    vhard:  { cx: 0.38, cy: 0.40, sx: 0.10, sy: 0.08 },
+    rare:   { cx: 0.55, cy: 0.42, sx: 0.15, sy: 0.07 },
+    noisy:  { cx: 0.30, cy: 0.26, sx: 0.13, sy: 0.10 },
+    redund: { cx: 0.88, cy: 0.05, sx: 0.06, sy: 0.04 },
+  };
+  for (const [cat, n] of Object.entries(counts)) {
+    const c = centers[cat];
+    const sx = (spread[cat]||1) * c.sx;
+    const sy = (spread[cat]||1) * c.sy;
+    for (let i=0;i<n;i++) {
+      // Box-Muller
+      const u1 = rng(), u2 = rng();
+      const z0 = Math.sqrt(-2*Math.log(u1||.001)) * Math.cos(2*Math.PI*u2);
+      const z1 = Math.sqrt(-2*Math.log(rng()||.001)) * Math.cos(2*Math.PI*rng());
+      pts.push({
+        cat,
+        x: Math.min(.97, Math.max(.03, c.cx + z0*sx)),
+        y: Math.min(.52, Math.max(.01, c.cy + z1*sy)),
+      });
+    }
+  }
+  return pts;
+}
+
+const REGIONS = [
+  {
+    id: 'europe',
+    name: 'Europe',
+    emoji: '🇪🇺',
+    samples: 48200,
+    fraudRate: '2.3%',
+    counts: { easy:8400, mild:11200, hard:9600, vhard:4100, rare:3800, noisy:5200, redund:5900 },
+    spread:  { easy:1.0, mild:1.1, hard:1.2, vhard:1.0, rare:1.4, noisy:1.5, redund:.8 },
+    seed: 42,
+    verdict: 'MODERATE CONCERN',
+    verdictColor: '#f0b840',
+    verdictBg: 'rgba(240,184,64,.08)',
+    verdictBorder: 'rgba(240,184,64,.3)',
+    overview: 'Elevated noisy label rate (10.8%) driven by SEPA cross-border transactions where legitimate chargebacks are often mislabelled as fraud. Hard-to-rare ratio is healthy. Immediate focus: relabel SEPA dispute samples.',
+    actions: [
+      { icon:'⚠', color:'var(--noisy)', text:'<strong>Relabel 5,200 noisy samples</strong> — route to SME queue ranked by AUM score. Focus on SEPA & open-banking edge cases where label provenance is weakest.' },
+      { icon:'✓', color:'var(--easy)', text:'<strong>Easy + Redundant pool is strong (29%)</strong> — safe to prune 30% of redundant samples to reduce training time without accuracy loss.' },
+      { icon:'→', color:'var(--hard)', text:'<strong>Hard samples (19.9%) are at ideal level</strong> — boundary between card-present and CNP fraud is well-represented. Maintain curriculum ordering: easy → mild → hard.' },
+      { icon:'◆', color:'var(--rare)', text:'<strong>Rare at 7.9% is acceptable</strong> — covers niche fraud schemes (triangulation, refund abuse). Apply mild oversampling (1.5×) to ensure coverage in evaluation.' },
+    ]
+  },
+  {
+    id: 'north_america',
+    name: 'North America',
+    emoji: '🌎',
+    samples: 72400,
+    fraudRate: '3.1%',
+    counts: { easy:18600, mild:16800, hard:10200, vhard:5800, rare:4200, noisy:5100, redund:11700 },
+    spread:  { easy:.9, mild:1.0, hard:1.1, vhard:1.2, rare:1.6, noisy:1.2, redund:.7 },
+    seed: 137,
+    verdict: 'GOOD',
+    verdictColor: '#4df5c8',
+    verdictBg: 'rgba(77,245,200,.07)',
+    verdictBorder: 'rgba(77,245,200,.3)',
+    overview: 'Healthiest region in the portfolio. Easy+Mild dominates (49%), redundant pool is large but manageable. Noisy label rate (7%) is below threshold. Primary opportunity: prune redundant samples and focus the hard-sample budget on CNP fraud edge cases.',
+    actions: [
+      { icon:'✓', color:'var(--easy)', text:'<strong>Dataset quality is production-ready</strong> — Easy+Mild at 49.0% provides a solid learning foundation. Low noise indicates historically clean labelling practices.' },
+      { icon:'→', color:'var(--redund)', text:'<strong>Redundant pool (16.2%) is excessive</strong> — 6,000+ samples can be safely removed. Run coreset selection (k-center greedy) to keep representative coverage.' },
+      { icon:'◆', color:'var(--rare)', text:'<strong>Rare samples (5.8%) are slightly low</strong> — synthetic fraud generation (CTGAN) for emerging schemes: SIM-swap, account takeover via social engineering. Target 8–10%.' },
+      { icon:'⚠', color:'var(--vhard)', text:'<strong>Very Hard cluster (8.0%) is borderline</strong> — review samples where model confidence oscillates. Consider splitting "grey zone" transactions into a separate uncertainty model.' },
+    ]
+  },
+  {
+    id: 'latam',
+    name: 'Latin America',
+    emoji: '🌍',
+    samples: 31600,
+    fraudRate: '4.8%',
+    counts: { easy:4200, mild:5800, hard:6400, vhard:5200, rare:6100, noisy:2100, redund:1800 },
+    spread:  { easy:1.1, mild:1.3, hard:1.0, vhard:1.3, rare:1.1, noisy:1.6, redund:1.0 },
+    seed: 9001,
+    verdict: 'HIGH RISK',
+    verdictColor: '#f06868',
+    verdictBg: 'rgba(240,104,104,.08)',
+    verdictBorder: 'rgba(240,104,104,.3)',
+    overview: 'Critical data quality issues. Rare (19.3%) and Very Hard (16.5%) are both far above healthy thresholds — the model will struggle to generalise. Dataset reflects highly regionalised fraud patterns (PIX instant payments, boleto fraud) that cluster in novel sub-spaces. Immediate restructuring needed before production use.',
+    actions: [
+      { icon:'⚠', color:'var(--rare)', text:'<strong>Rare at 19.3% — critical overexposure</strong> — PIX and boleto fraud schemes form isolated clusters the model risks memorising. Collect 15,000+ new samples from mainstream fraud patterns before retraining.' },
+      { icon:'⚠', color:'var(--vhard)', text:'<strong>Very Hard at 16.5% — model boundary is unstable</strong> — consider a two-stage classifier: first detect anomalous behaviour (unsupervised), then apply fraud label with supervised model on pre-filtered set.' },
+      { icon:'→', color:'var(--easy)', text:'<strong>Easy+Mild at only 31.6% — dangerously low</strong> — augment with synthetic "clean" negative samples (confirmed legitimate transactions) to anchor the classifier decision boundary.' },
+      { icon:'✓', color:'var(--noisy)', text:'<strong>Noisy at 6.6% is manageable</strong> — noisy labels are not the primary concern. Focus capacity on acquiring more typical fraud samples, not relabelling.' },
+    ]
+  },
+  {
+    id: 'apac',
+    name: 'Asia Pacific',
+    emoji: '🌏',
+    samples: 55800,
+    fraudRate: '2.9%',
+    counts: { easy:10200, mild:12400, hard:9800, vhard:6200, rare:8400, noisy:5600, redund:3200 },
+    spread:  { easy:1.0, mild:1.1, hard:1.0, vhard:1.1, rare:1.2, noisy:1.3, redund:.9 },
+    seed: 7777,
+    verdict: 'MODERATE CONCERN',
+    verdictColor: '#f0b840',
+    verdictBg: 'rgba(240,184,64,.08)',
+    verdictBorder: 'rgba(240,184,64,.3)',
+    overview: 'Dual-signal region. High diversity of fraud typologies (WeChat Pay, Alipay, cross-border remittance, JP mobile) creates a naturally varied dataset — rare samples are elevated (15.1%) reflecting scheme diversity. Noisy rate (10%) needs attention; suspected source is inconsistent labelling across JP, KR, and AU sub-markets with different definition thresholds.',
+    actions: [
+      { icon:'⚠', color:'var(--rare)', text:'<strong>Rare at 15.1% — needs moderation</strong> — each sub-market (JP, CN, AU, SG) has unique fraud fingerprints creating isolated rare clusters. Train region-specific sub-models or apply market-aware feature engineering to bring rare % down below 10%.' },
+      { icon:'⚠', color:'var(--noisy)', text:'<strong>Noisy at 10% — label harmonisation needed</strong> — AU uses different chargeback codes than CN/JP. Standardise label definitions across markets. Run agreement analysis between local ops teams.' },
+      { icon:'→', color:'var(--hard)', text:'<strong>Hard at 17.6% is appropriate</strong> — reflects genuine decision complexity at the boundary between domestic and cross-border fraud. Maintain hard examples; do not filter them.' },
+      { icon:'◆', color:'var(--vhard)', text:'<strong>Very Hard at 11.1% — consider region split</strong> — consider separate models for CN vs ASEAN+ANZ where fraud mechanics differ significantly. Ensemble outputs at inference.' },
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// SCATTER PLOT ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+const W = 600, H = 420;
+const PAD = { top:24, right:20, bottom:52, left:52 };
+const PW = W - PAD.left - PAD.right;
+const PH = H - PAD.top - PAD.bottom;
+
+function px(x) { return PAD.left + x * PW; }
+function py(y) { return PAD.top + (1 - y/0.55) * PH; }
+
+const ZONES = [
+  { x0:.65, x1:1.0, y0:0, y1:.2, label:'EASY ZONE', col:'rgba(77,245,200,.025)' },
+  { x0:.35, x1:.65, y0:.25, y1:.55, label:'HARD ZONE', col:'rgba(240,184,64,.025)' },
+  { x0:.0,  x1:.45, y0:.15, y1:.4, label:'NOISY ZONE', col:'rgba(255,79,122,.02)' },
+  { x0:.4,  x1:.75, y0:.35, y1:.55, label:'RARE ZONE',  col:'rgba(192,132,255,.025)' },
+];
+
+function buildScatterSVG(region) {
+  const pts = genPoints(region.seed, region.counts, region.spread);
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.setAttribute('class','scatter');
+  svg.setAttribute('data-region', region.id);
+
+  // background
+  const bg = document.createElementNS(svgNS,'rect');
+  bg.setAttribute('width',W); bg.setAttribute('height',H); bg.setAttribute('fill','#0c0f18');
+  svg.appendChild(bg);
+
+  // zones
+  for (const z of ZONES) {
+    const r = document.createElementNS(svgNS,'rect');
+    r.setAttribute('x', px(z.x0)); r.setAttribute('y', py(z.y1));
+    r.setAttribute('width', (z.x1-z.x0)*PW); r.setAttribute('height', (z.y1-z.y0)/0.55*PH);
+    r.setAttribute('fill', z.col);
+    svg.appendChild(r);
+    const t = document.createElementNS(svgNS,'text');
+    t.setAttribute('x', px(z.x0)+6); t.setAttribute('y', py(z.y1)+14);
+    t.setAttribute('class','zone-label'); t.textContent = z.label;
+    svg.appendChild(t);
+  }
+
+  // grid lines
+  for (let i=0;i<=5;i++) {
+    const xv = i/5;
+    const l = document.createElementNS(svgNS,'line');
+    l.setAttribute('x1',px(xv)); l.setAttribute('y1',PAD.top);
+    l.setAttribute('x2',px(xv)); l.setAttribute('y2',PAD.top+PH);
+    l.setAttribute('class','grid-line'); l.setAttribute('opacity','.4');
+    svg.appendChild(l);
+    const t = document.createElementNS(svgNS,'text');
+    t.setAttribute('x',px(xv)); t.setAttribute('y',PAD.top+PH+16);
+    t.setAttribute('class','axis-label'); t.setAttribute('text-anchor','middle');
+    t.textContent = xv.toFixed(1);
+    svg.appendChild(t);
+  }
+  for (let i=0;i<=5;i++) {
+    const yv = i/5 * 0.5;
+    const l = document.createElementNS(svgNS,'line');
+    l.setAttribute('x1',PAD.left); l.setAttribute('y1',py(yv));
+    l.setAttribute('x2',PAD.left+PW); l.setAttribute('y2',py(yv));
+    l.setAttribute('class','grid-line'); l.setAttribute('opacity','.4');
+    svg.appendChild(l);
+    const t = document.createElementNS(svgNS,'text');
+    t.setAttribute('x',PAD.left-8); t.setAttribute('y',py(yv)+4);
+    t.setAttribute('class','axis-label'); t.setAttribute('text-anchor','end');
+    t.textContent = yv.toFixed(2);
+    svg.appendChild(t);
+  }
+
+  // axis labels
+  const axX = document.createElementNS(svgNS,'text');
+  axX.setAttribute('x', PAD.left+PW/2); axX.setAttribute('y', H-8);
+  axX.setAttribute('class','axis-label'); axX.setAttribute('text-anchor','middle');
+  axX.setAttribute('fill','#68b8ff'); axX.textContent = 'Mean Confidence →';
+  svg.appendChild(axX);
+  const axY = document.createElementNS(svgNS,'text');
+  axY.setAttribute('transform', `rotate(-90, 12, ${H/2})`);
+  axY.setAttribute('x',12); axY.setAttribute('y',H/2);
+  axY.setAttribute('class','axis-label'); axY.setAttribute('text-anchor','middle');
+  axY.setAttribute('fill','#f0b840'); axY.textContent = 'Variability (std) →';
+  svg.appendChild(axY);
+
+  // points — jitter for dense clusters
+  const rng2 = mulberry32(region.seed + 1);
+  for (const pt of pts) {
+    const cx = px(pt.x) + (rng2()-.5)*1.5;
+    const cy = py(pt.y) + (rng2()-.5)*1.5;
+    const c = document.createElementNS(svgNS,'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+    c.setAttribute('r', 3.8);
+    c.setAttribute('fill', CATS[pt.cat].color);
+    c.setAttribute('opacity', '.52');
+    c.setAttribute('data-cat', pt.cat);
+    c.setAttribute('data-x', pt.x.toFixed(3));
+    c.setAttribute('data-y', pt.y.toFixed(3));
+    svg.appendChild(c);
+  }
+
+  return { svg, pts };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DONUT CHART
+// ═══════════════════════════════════════════════════════════════
+
+function buildDonut(region) {
+  const total = Object.values(region.counts).reduce((a,b)=>a+b,0);
+  const noisy = region.counts.noisy;
+  const noisePct = (noisy/total*100).toFixed(1);
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 100 100');
+  svg.setAttribute('class','donut');
+
+  const cats = ['easy','mild','hard','vhard','rare','noisy','redund'];
+  let angle = -Math.PI/2;
+  for (const cat of cats) {
+    const n = region.counts[cat]||0;
+    const sweep = (n/total) * 2*Math.PI;
+    const x1 = 50 + 38*Math.cos(angle);
+    const y1 = 50 + 38*Math.sin(angle);
+    const x2 = 50 + 38*Math.cos(angle+sweep);
+    const y2 = 50 + 38*Math.sin(angle+sweep);
+    const large = sweep > Math.PI ? 1 : 0;
+    const ix1 = 50 + 26*Math.cos(angle+sweep);
+    const iy1 = 50 + 26*Math.sin(angle+sweep);
+    const ix2 = 50 + 26*Math.cos(angle);
+    const iy2 = 50 + 26*Math.sin(angle);
+    const path = document.createElementNS(svgNS,'path');
+    path.setAttribute('d', `M${x1.toFixed(2)},${y1.toFixed(2)} A38,38 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L${ix1.toFixed(2)},${iy1.toFixed(2)} A26,26 0 ${large},0 ${ix2.toFixed(2)},${iy2.toFixed(2)} Z`);
+    path.setAttribute('fill', CATS[cat].color);
+    path.setAttribute('opacity', cat==='noisy' ? '1' : '.75');
+    svg.appendChild(path);
+    angle += sweep;
+  }
+
+  // center text
+  const bg = document.createElementNS(svgNS,'circle');
+  bg.setAttribute('cx','50'); bg.setAttribute('cy','50'); bg.setAttribute('r','24');
+  bg.setAttribute('fill','#0c0f18');
+  svg.appendChild(bg);
+  const tv = document.createElementNS(svgNS,'text');
+  tv.setAttribute('x','50'); tv.setAttribute('y','52');
+  tv.setAttribute('text-anchor','middle'); tv.setAttribute('dominant-baseline','middle');
+  tv.setAttribute('font-family','JetBrains Mono,monospace'); tv.setAttribute('font-size','11');
+  tv.setAttribute('fill', parseFloat(noisePct)>12 ? '#ff4f7a' : parseFloat(noisePct)>8 ? '#f0b840' : '#4df5c8');
+  tv.setAttribute('font-weight','500'); tv.textContent = noisePct+'%';
+  svg.appendChild(tv);
+  const ts = document.createElementNS(svgNS,'text');
+  ts.setAttribute('x','50'); ts.setAttribute('y','63');
+  ts.setAttribute('text-anchor','middle'); ts.setAttribute('font-family','JetBrains Mono,monospace');
+  ts.setAttribute('font-size','6'); ts.setAttribute('fill','#556080'); ts.textContent = 'NOISY';
+  svg.appendChild(ts);
+
+  return svg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPOSITION BAR
+// ═══════════════════════════════════════════════════════════════
+
+function buildCompBar(counts) {
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  const wrap = document.createElement('div');
+  const bar = document.createElement('div'); bar.className='comp-bar';
+  const leg = document.createElement('div'); leg.className='comp-legend';
+  for (const [cat, n] of Object.entries(counts)) {
+    const pct = (n/total*100).toFixed(1);
+    const seg = document.createElement('div'); seg.className='comp-seg';
+    seg.style.width=pct+'%'; seg.style.background=CATS[cat].color; seg.style.opacity='.75';
+    bar.appendChild(seg);
+    const item = document.createElement('div'); item.className='comp-item';
+    const dot = document.createElement('div'); dot.className='comp-dot';
+    dot.style.background=CATS[cat].color;
+    item.appendChild(dot);
+    item.innerHTML += `${CATS[cat].label} <span style="color:var(--text);margin-left:.2rem">${pct}%</span>`;
+    leg.appendChild(item);
+  }
+  wrap.appendChild(bar); wrap.appendChild(leg);
+  return wrap;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUILD UI
+// ═══════════════════════════════════════════════════════════════
+
+function updateBar(region) {
+    if (!region) {
+      // Overall view — aggregate all regions
+      let totSamples=0, totNoisy=0, totRare=0, totEasy=0, totHard=0;
+      REGIONS.forEach(r => {
+        const t = Object.values(r.counts).reduce((a,b)=>a+b,0);
+        totSamples += t;
+        totNoisy   += r.counts.noisy;
+        totRare    += r.counts.rare;
+        totEasy    += r.counts.easy + r.counts.mild;
+        totHard    += r.counts.hard + r.counts.vhard;
+      });
+      document.getElementById('barRegionLabel').textContent = '🌐 All Regions — Global Summary';
+      document.getElementById('gbTotal').textContent = totSamples.toLocaleString();
+      document.getElementById('gbNoisy').textContent  = (totNoisy/totSamples*100).toFixed(1)+'%';
+      document.getElementById('gbRare').textContent   = (totRare/totSamples*100).toFixed(1)+'%';
+      document.getElementById('gbEasy').textContent   = (totEasy/totSamples*100).toFixed(1)+'%';
+      document.getElementById('gbHard').textContent   = (totHard/totSamples*100).toFixed(1)+'%';
+      // relabel bar cells for global context
+      document.querySelector('#globalBar .gbar-cell:nth-child(1) .gbar-lbl').textContent = 'Total Samples';
+      document.querySelector('#globalBar .gbar-cell:nth-child(2) .gbar-lbl').textContent = 'Noisy Labels';
+      document.querySelector('#globalBar .gbar-cell:nth-child(3) .gbar-lbl').textContent = 'Rare Patterns';
+      document.querySelector('#globalBar .gbar-cell:nth-child(4) .gbar-lbl').textContent = 'Easy + Mild';
+      document.querySelector('#globalBar .gbar-cell:nth-child(5) .gbar-lbl').textContent = 'Hard + Very Hard';
+    } else {
+      const total = Object.values(region.counts).reduce((a,b)=>a+b,0);
+      document.getElementById('barRegionLabel').textContent = region.emoji + ' ' + region.name + ' — Region Summary';
+      document.getElementById('gbTotal').textContent = total.toLocaleString();
+      document.getElementById('gbNoisy').textContent  = (region.counts.noisy/total*100).toFixed(1)+'%';
+      document.getElementById('gbRare').textContent   = (region.counts.rare/total*100).toFixed(1)+'%';
+      document.getElementById('gbEasy').textContent   = ((region.counts.easy+region.counts.mild)/total*100).toFixed(1)+'%';
+      document.getElementById('gbHard').textContent   = ((region.counts.hard+region.counts.vhard)/total*100).toFixed(1)+'%';
+      document.querySelector('#globalBar .gbar-cell:nth-child(1) .gbar-lbl').textContent = 'Region Samples';
+      document.querySelector('#globalBar .gbar-cell:nth-child(2) .gbar-lbl').textContent = 'Noisy Labels';
+      document.querySelector('#globalBar .gbar-cell:nth-child(3) .gbar-lbl').textContent = 'Rare Patterns';
+      document.querySelector('#globalBar .gbar-cell:nth-child(4) .gbar-lbl').textContent = 'Easy + Mild';
+      document.querySelector('#globalBar .gbar-cell:nth-child(5) .gbar-lbl').textContent = 'Hard + Very Hard';
+    }
+  }
+
+function buildOverallPanel() {
+  const panel = document.getElementById('overallPanel');
+
+  // Comparison grid
+  const compTitle = document.createElement('div');
+  compTitle.className = 'comp-section-title';
+  compTitle.innerHTML = 'Cross-Region <em>Quality Comparison</em>';
+  panel.appendChild(compTitle);
+
+  const compGrid = document.createElement('div');
+  compGrid.className = 'comp-grid';
+  compGrid.id = 'compGrid';
+  panel.appendChild(compGrid);
+
+  REGIONS.forEach(region => {
+    const total = Object.values(region.counts).reduce((a,b)=>a+b,0);
+    const cell = document.createElement('div'); cell.className='comp-cell';
+    const noisePct = (region.counts.noisy/total*100).toFixed(1);
+    const rarePct  = (region.counts.rare/total*100).toFixed(1);
+    const easyPct  = ((region.counts.easy+region.counts.mild)/total*100).toFixed(1);
+    const hardPct  = ((region.counts.hard+region.counts.vhard)/total*100).toFixed(1);
+    const intScore = Math.max(0, 100 - parseFloat(noisePct)*6);
+    const balScore = Math.max(0, 100 - Math.abs(parseFloat(hardPct)-20)*2 - Math.abs(parseFloat(rarePct)-8)*3);
+    const overall = ((intScore+balScore)/2).toFixed(0);
+    const overallColor = overall>75?'#4df5c8':overall>55?'#f0b840':'#f06868';
+    const overallBg = overall>75?'rgba(77,245,200,.07)':overall>55?'rgba(240,184,64,.07)':'rgba(240,104,104,.07)';
+    const overallBdr = overall>75?'rgba(77,245,200,.25)':overall>55?'rgba(240,184,64,.25)':'rgba(240,104,104,.25)';
+    cell.innerHTML = `
+      <div class="comp-region">${region.emoji} ${region.name}</div>
+      <div class="comp-metric">
+        <div class="comp-metric-lbl">Composition</div>
+        <div class="comp-mini-bar">
+          <div class="comp-mini-seg" style="width:${easyPct}%;background:var(--easy);opacity:.8"></div>
+          <div class="comp-mini-seg" style="width:${hardPct}%;background:var(--hard);opacity:.8"></div>
+          <div class="comp-mini-seg" style="width:${rarePct}%;background:var(--rare);opacity:.8"></div>
+          <div class="comp-mini-seg" style="width:${noisePct}%;background:var(--noisy);opacity:.8"></div>
+        </div>
+        <div class="comp-metric-val" style="color:var(--text);font-size:.65rem">
+          <span style="color:var(--easy)">${easyPct}% easy</span> · <span style="color:var(--noisy)">${noisePct}% noisy</span>
+        </div>
+      </div>
+      <div class="comp-metric">
+        <div class="comp-metric-lbl">Label Integrity</div>
+        <div class="comp-mini-bar">
+          <div class="comp-mini-seg" style="width:${intScore}%;background:${overallColor};opacity:.7"></div>
+          <div class="comp-mini-seg" style="flex:1;background:var(--s3)"></div>
+        </div>
+        <div class="comp-metric-val" style="color:${overallColor}">${intScore.toFixed(0)}<span style="color:var(--muted);font-size:.6rem">/100</span></div>
+      </div>
+      <div class="comp-overall">
+        <div class="comp-grade" style="color:${overallColor};background:${overallBg};border-color:${overallBdr}">${region.verdict}</div>
+        <div style="font-family:var(--mono);font-size:.5rem;color:var(--muted);margin-top:.4rem">${total.toLocaleString()} samples</div>
+      </div>
+    `;
+    compGrid.appendChild(cell);
+  });
+
+  // Global strategy section
+  const divider = document.createElement('hr');
+  divider.className = 'divider';
+  divider.style.marginTop = '3rem';
+  panel.appendChild(divider);
+
+  const strategy = document.createElement('div');
+  strategy.innerHTML = `
+    <div style="background:var(--s1);border:1px solid var(--bd);border-radius:4px;padding:1.8rem 2rem;margin-top:2rem;">
+      <div style="font-family:var(--mono);font-size:.56rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:1.2rem;padding-bottom:.8rem;border-bottom:1px solid var(--bd)">Global Cartography Interpretation Framework · Fraud Detection</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;">
+        <div>
+          <div style="font-family:var(--mono);font-size:.62rem;font-weight:500;color:var(--easy);margin-bottom:.6rem;">✓ HEALTHY SIGNALS</div>
+          <ul style="list-style:none;">
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0;border-bottom:1px solid rgba(31,38,64,.4)"><strong style="color:var(--text)">Easy + Mild majority (40–60%)</strong> — classifier has stable anchor points to learn clear fraud patterns</li>
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0;border-bottom:1px solid rgba(31,38,64,.4)"><strong style="color:var(--text)">Hard samples 15–25%</strong> — sufficient boundary exploration without instability</li>
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0"><strong style="color:var(--text)">Rare samples 5–12%</strong> — covers edge-case fraud schemes without overwhelming</li>
+          </ul>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:.62rem;font-weight:500;color:var(--noisy);margin-bottom:.6rem;">⚠ WARNING SIGNALS</div>
+          <ul style="list-style:none;">
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0;border-bottom:1px solid rgba(31,38,64,.4)"><strong style="color:var(--text)">Noisy labels &gt;12%</strong> — model learns conflicting supervision; precision degrades at high-recall operating points</li>
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0;border-bottom:1px solid rgba(31,38,64,.4)"><strong style="color:var(--text)">Rare &gt;20%</strong> — overfit risk; model memorises uncommon patterns, poor OOD generalisation</li>
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0"><strong style="color:var(--text)">Very Hard &gt;15%</strong> — high ambiguity; decision boundary unstable, inconsistent scores</li>
+          </ul>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:.62rem;font-weight:500;color:var(--hard);margin-bottom:.6rem;">→ REMEDIATION ACTIONS</div>
+          <ul style="list-style:none;">
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0;border-bottom:1px solid rgba(31,38,64,.4)"><strong style="color:var(--text)">Noisy:</strong> Re-label with SME review. Use AUM ranking to prioritise — lowest-AUM samples are most suspect</li>
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0;border-bottom:1px solid rgba(31,38,64,.4)"><strong style="color:var(--text)">Rare excess:</strong> Apply SMOTE or targeted synthetic generation. Do not simply oversample</li>
+            <li style="font-size:.84rem;color:#7888a8;padding:.4rem 0"><strong style="color:var(--text)">Hard deficit:</strong> Active learning — query boundary samples from unlabelled pool to strengthen decision surface</li>
+          </ul>
+        </div>
+      </div>
+    </div>`;
+  panel.appendChild(strategy);
+}
+
+function buildAll() {
+  const nav = document.getElementById('regionNav');
+  const panels = document.getElementById('regionPanels');
+
+  // ── OVERALL TAB ──
+  const overallTab = document.createElement('button');
+  overallTab.className = 'rtab';
+  overallTab.innerHTML = '🌐 Overall <span class="quality-dot" style="background:var(--mild)"></span>';
+  overallTab.onclick = () => {
+    document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.region-panel').forEach(p=>p.classList.remove('active'));
+    overallTab.classList.add('active');
+    document.getElementById('overallPanel').classList.add('active');
+    updateBar(null);
+  };
+  nav.appendChild(overallTab);
+
+  REGIONS.forEach((region, ri) => {
+    const total = Object.values(region.counts).reduce((a,b)=>a+b,0);
+
+    // quality dot color
+    const qColor = region.verdictColor;
+
+    // TAB
+    const tab = document.createElement('button');
+    tab.className = 'rtab' + (ri===0?' active':'');
+    tab.dataset.target = region.id;
+    tab.innerHTML = `${region.emoji} ${region.name} <span class="quality-dot" style="background:${qColor}"></span>`;
+    tab.onclick = () => {
+      document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.region-panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-'+region.id).classList.add('active');
+      updateBar(region);
+    };
+    nav.appendChild(tab);
+
+    // PANEL
+    const panel = document.createElement('div');
+    panel.className = 'region-panel' + (ri===0?' active':'');
+    panel.id = 'panel-'+region.id;
+
+    // --- Header ---
+    const easyPct = ((region.counts.easy+region.counts.mild)/total*100).toFixed(1);
+    const noisePct = (region.counts.noisy/total*100).toFixed(1);
+    const rarePct  = (region.counts.rare/total*100).toFixed(1);
+    const hardPct  = ((region.counts.hard+region.counts.vhard)/total*100).toFixed(1);
+
+    panel.innerHTML = `
+      <div class="region-header">
+        <div>
+          <div class="region-title">${region.emoji} <em>${region.name}</em></div>
+          <div class="region-meta">N = ${total.toLocaleString()} training samples · Fraud rate ${region.fraudRate}</div>
+        </div>
+        <div class="region-stats">
+          <div class="rstat" style="color:var(--easy);border-color:rgba(77,245,200,.2);background:rgba(77,245,200,.06)">EASY+MILD ${easyPct}%</div>
+          <div class="rstat" style="color:var(--hard);border-color:rgba(240,184,64,.2);background:rgba(240,184,64,.06)">HARD+VHARD ${hardPct}%</div>
+          <div class="rstat" style="color:var(--rare);border-color:rgba(192,132,255,.2);background:rgba(192,132,255,.06)">RARE ${rarePct}%</div>
+          <div class="rstat" style="color:var(--noisy);border-color:rgba(255,79,122,.2);background:rgba(255,79,122,.06)">NOISY ${noisePct}%</div>
+        </div>
+      </div>
+      <div class="main-grid" id="grid-${region.id}">
+        <div class="scatter-card">
+          <div class="card-head">
+            <span>Training Data Map — Confidence × Variability Space</span>
+            <span style="color:var(--muted);font-size:.52rem">${total.toLocaleString()} samples</span>
+          </div>
+          <div class="scatter-wrap" id="scatter-${region.id}"></div>
+          <div class="legend-grid" id="legend-${region.id}"></div>
+        </div>
+        <div class="right-col">
+          <div class="quality-card">
+            <div class="card-head">Label Quality Analysis</div>
+            <div class="quality-body">
+              <div class="donut-wrap" id="donut-${region.id}"></div>
+              <div style="font-family:var(--mono);font-size:.54rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin:.8rem 0 .5rem">Sample Composition</div>
+              <div id="compbar-${region.id}"></div>
+              <div class="quality-bar-wrap">
+                <div class="qbar-row"><span>Label Integrity Score</span><span id="integrity-${region.id}" style="color:var(--text)">—</span></div>
+                <div class="qbar-track"><div class="qbar-fill" id="qfill-${region.id}" style="background:var(--easy)"></div></div>
+                <div class="qbar-row" style="margin-top:.6rem"><span>Difficulty Balance Score</span><span id="balance-${region.id}" style="color:var(--text)">—</span></div>
+                <div class="qbar-track"><div class="qbar-fill" id="bfill-${region.id}" style="background:var(--mild)"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="strategy-card">
+            <div class="card-head">Regional Strategy</div>
+            <div class="strategy-body">
+              <div class="verdict-row">
+                <div class="verdict-badge" style="color:${region.verdictColor};background:${region.verdictBg};border-color:${region.verdictBorder}">${region.verdict}</div>
+                <div class="verdict-text" style="color:${region.verdictColor};font-size:.6rem;line-height:1.4;max-width:220px">${region.overview}</div>
+              </div>
+              <ul class="action-list" id="actions-${region.id}"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    panels.appendChild(panel);
+
+    // Build scatter
+    const { svg } = buildScatterSVG(region);
+    document.getElementById('scatter-'+region.id).appendChild(svg);
+
+    // Build legend
+    const legEl = document.getElementById('legend-'+region.id);
+    for (const [cat, n] of Object.entries(region.counts)) {
+      const pct = (n/total*100).toFixed(1);
+      const item = document.createElement('div'); item.className='legend-item';
+      item.innerHTML = `<div class="legend-dot" style="background:${CATS[cat].color}"></div><span>${CATS[cat].label}</span><span class="legend-count">${pct}%</span>`;
+      legEl.appendChild(item);
+    }
+
+    // Build donut
+    const donutEl = document.getElementById('donut-'+region.id);
+    donutEl.appendChild(buildDonut(region));
+    const donutInfo = document.createElement('div'); donutInfo.className='donut-legend';
+    const nPct = (region.counts.noisy/total*100).toFixed(1);
+    const rPct = (region.counts.rare/total*100).toFixed(1);
+    const ePct = ((region.counts.easy+region.counts.redund)/total*100).toFixed(1);
+    donutInfo.innerHTML = `
+      <div class="dl-row"><div class="dl-label"><div class="dl-dot" style="background:var(--noisy)"></div>Noisy</div><div class="dl-val" style="color:var(--noisy)">${nPct}%</div></div>
+      <div class="dl-row"><div class="dl-label"><div class="dl-dot" style="background:var(--rare)"></div>Rare</div><div class="dl-val" style="color:var(--rare)">${rPct}%</div></div>
+      <div class="dl-row"><div class="dl-label"><div class="dl-dot" style="background:var(--easy)"></div>Easy+Redund</div><div class="dl-val" style="color:var(--easy)">${ePct}%</div></div>
+    `;
+    donutEl.appendChild(donutInfo);
+
+    // Comp bar
+    document.getElementById('compbar-'+region.id).appendChild(buildCompBar(region.counts));
+
+    // Scores
+    const integrityScore = Math.max(0, 100 - parseFloat(nPct)*6);
+    const balanceScore = Math.max(0, 100 - Math.abs(parseFloat(hardPct)-20)*2 - Math.abs(parseFloat(rarePct)-8)*3);
+    const intEl = document.getElementById('integrity-'+region.id);
+    const balEl = document.getElementById('balance-'+region.id);
+    const qfEl = document.getElementById('qfill-'+region.id);
+    const bfEl = document.getElementById('bfill-'+region.id);
+    intEl.textContent = integrityScore.toFixed(0)+'/100';
+    intEl.style.color = integrityScore>80?'var(--easy)':integrityScore>60?'var(--hard)':'var(--noisy)';
+    qfEl.style.width = integrityScore+'%';
+    qfEl.style.background = integrityScore>80?'var(--easy)':integrityScore>60?'var(--hard)':'var(--noisy)';
+    balEl.textContent = balanceScore.toFixed(0)+'/100';
+    balEl.style.color = balanceScore>75?'var(--easy)':balanceScore>55?'var(--hard)':'var(--noisy)';
+    bfEl.style.width = balanceScore+'%';
+    bfEl.style.background = balanceScore>75?'var(--mild)':balanceScore>55?'var(--hard)':'var(--vhard)';
+
+    // Actions
+    const actionList = document.getElementById('actions-'+region.id);
+    for (const a of region.actions) {
+      const li = document.createElement('li'); li.className='action-item';
+      li.innerHTML = `<div class="action-icon" style="color:${a.color}">${a.icon}</div><div>${a.text}</div>`;
+      actionList.appendChild(li);
+    }
+  });
+
+  // Build overall panel content
+  buildOverallPanel();
+
+  // Init: show first region tab by default
+  updateBar(REGIONS[0]);
+
+  // Tooltip
+  document.querySelectorAll('svg.scatter circle').forEach(c => {
+    c.addEventListener('mousemove', e => {
+      const tt = document.getElementById('tooltip');
+      const cat = c.dataset.cat;
+      const ci = CATS[cat];
+      tt.innerHTML = `<div class="tt-cat" style="color:${ci.color}">${ci.label}</div>
+        <div>Confidence: <strong>${parseFloat(c.dataset.x).toFixed(3)}</strong></div>
+        <div>Variability: <strong>${parseFloat(c.dataset.y).toFixed(3)}</strong></div>
+        <div style="color:var(--muted);margin-top:.3rem;font-size:.52rem">${ci.desc}</div>`;
+      tt.style.opacity='1';
+      tt.style.left=(e.pageX+14)+'px'; tt.style.top=(e.pageY-10)+'px';
+    });
+    c.addEventListener('mouseleave', () => {
+      document.getElementById('tooltip').style.opacity='0';
+    });
+    c.style.cursor='crosshair';
+  });
+}
+
+buildAll();
+</script>
+</body>
+</html>

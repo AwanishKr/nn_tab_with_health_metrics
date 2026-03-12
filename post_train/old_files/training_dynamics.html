@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Dynamics — Visual Compendium</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Syne+Mono&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #07080c;
+  --s1:      #0d0f16;
+  --s2:      #12151e;
+  --border:  #1e2230;
+  --border2: #2a2f3f;
+  --text:    #dce4f0;
+  --muted:   #5a6380;
+  --faint:   #2a3045;
+
+  /* Category accent colors */
+  --traj:    #3dd9c5;   /* teal  — Trajectory */
+  --split:   #9b8cff;   /* indigo — Split-based */
+  --grad:    #f5a623;   /* amber — Gradient */
+  --repr:    #f06292;   /* rose  — Representation */
+  --margin:  #5bd45b;   /* green — Margin/AUM extended */
+  --decision:#fb923c;   /* orange — Decision-Level */
+  --cnoise2: #34d399;   /* emerald — Constructive Noise */
+
+  --mono: 'Syne Mono', monospace;
+  --serif: 'Libre Baskerville', serif;
+  --sans:  'Syne', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 400;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+/* ─── NOISE ─── */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none;
+  opacity: .03;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 9999;
+}
+
+/* ─── HEADER ─── */
+header {
+  padding: 5rem 2rem 4rem;
+  text-align: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(61,217,197,.07) 0%, transparent 70%);
+  border-bottom: 1px solid var(--border);
+}
+.h-kicker {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: .65rem;
+  letter-spacing: .3em;
+  color: var(--traj);
+  text-transform: uppercase;
+  border: 1px solid rgba(61,217,197,.25);
+  padding: .35rem .9rem;
+  border-radius: 2px;
+  margin-bottom: 1.6rem;
+}
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+}
+h1 em { font-style: italic; color: var(--traj); }
+.h-sub {
+  margin: 1.2rem auto 0;
+  max-width: 580px;
+  color: var(--muted);
+  font-size: .95rem;
+  font-weight: 400;
+}
+
+/* ─── NAV ─── */
+nav {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(7,8,12,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: .8rem 1.5rem;
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+}
+.nav-label { font-family: var(--mono); font-size: .6rem; color: var(--muted); letter-spacing: .15em; margin-right: .5rem; }
+nav a {
+  font-family: var(--mono); font-size: .62rem; letter-spacing: .04em;
+  color: var(--muted); text-decoration: none;
+  padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 2px;
+  transition: all .18s;
+}
+nav a:hover { color: var(--text); border-color: var(--border2); background: var(--s1); }
+.nav-cat { padding: .2rem .6rem; border-radius: 1px; font-size: .58rem; border: none; }
+.nav-traj  { background: rgba(61,217,197,.12); color: var(--traj); }
+.nav-split { background: rgba(155,140,255,.12); color: var(--split); }
+.nav-grad  { background: rgba(245,166,35,.12); color: var(--grad); }
+.nav-repr  { background: rgba(240,98,146,.12); color: var(--repr); }
+.nav-dec   { background: rgba(251,146,60,.12); color: var(--decision); }
+.nav-cons  { background: rgba(52,211,153,.12); color: var(--cnoise2); }
+
+/* ─── LAYOUT ─── */
+main { max-width: 1120px; margin: 0 auto; padding: 0 1.5rem 8rem; }
+
+/* ─── CATEGORY BANDS ─── */
+.cat-band {
+  margin-top: 5rem;
+  padding: 1.2rem 1.8rem;
+  border-radius: 4px 4px 0 0;
+  display: flex; align-items: center; gap: 1rem;
+}
+.cat-band.traj  { background: rgba(61,217,197,.05);  border: 1px solid rgba(61,217,197,.18); border-bottom: none; }
+.cat-band.split { background: rgba(155,140,255,.05); border: 1px solid rgba(155,140,255,.18); border-bottom: none; }
+.cat-band.grad  { background: rgba(245,166,35,.05);  border: 1px solid rgba(245,166,35,.18);  border-bottom: none; }
+.cat-band.repr  { background: rgba(240,98,146,.05);  border: 1px solid rgba(240,98,146,.18);  border-bottom: none; }
+.cat-band.dec   { background: rgba(251,146,60,.05);  border: 1px solid rgba(251,146,60,.18);   border-bottom: none; }
+.cat-band.cons  { background: rgba(52,211,153,.05);  border: 1px solid rgba(52,211,153,.18);   border-bottom: none; }
+
+.cat-icon { font-size: 1.4rem; }
+.cat-name { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; }
+.cat-name.traj  { color: var(--traj); }
+.cat-name.split { color: var(--split); }
+.cat-name.grad  { color: var(--grad); }
+.cat-name.repr  { color: var(--repr); }
+.cat-name.dec   { color: var(--decision); }
+.cat-name.cons  { color: var(--cnoise2); }
+.cat-desc { font-size: .82rem; color: var(--muted); max-width: 560px; }
+.cat-pill {
+  margin-left: auto; font-family: var(--mono); font-size: .6rem;
+  padding: .3rem .7rem; border-radius: 2px; white-space: nowrap;
+}
+.cat-band.traj  .cat-pill { background: rgba(61,217,197,.12);  color: var(--traj);  border: 1px solid rgba(61,217,197,.25); }
+.cat-band.split .cat-pill { background: rgba(155,140,255,.12); color: var(--split); border: 1px solid rgba(155,140,255,.25); }
+.cat-band.grad  .cat-pill { background: rgba(245,166,35,.12);  color: var(--grad);  border: 1px solid rgba(245,166,35,.25); }
+.cat-band.repr  .cat-pill { background: rgba(240,98,146,.12);  color: var(--repr);  border: 1px solid rgba(240,98,146,.25); }
+.cat-band.dec   .cat-pill { background: rgba(251,146,60,.12);  color: var(--decision); border: 1px solid rgba(251,146,60,.25); }
+.cat-band.cons  .cat-pill { background: rgba(52,211,153,.12);  color: var(--cnoise2);  border: 1px solid rgba(52,211,153,.25); }
+
+/* ─── METRIC WRAPPER ─── */
+.cat-metrics {
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 0 4px 4px;
+}
+.cat-metrics.traj  { border-color: rgba(61,217,197,.15); }
+.cat-metrics.split { border-color: rgba(155,140,255,.15); }
+.cat-metrics.grad  { border-color: rgba(245,166,35,.15); }
+.cat-metrics.repr  { border-color: rgba(240,98,146,.15); }
+.cat-metrics.dec   { border-color: rgba(251,146,60,.15); }
+.cat-metrics.cons  { border-color: rgba(52,211,153,.15); }
+
+/* ─── METRIC CARD ─── */
+.metric {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity .55s, transform .55s;
+  border-bottom: 1px solid var(--border);
+}
+.metric:last-child { border-bottom: none; }
+.metric.vis { opacity: 1; transform: none; }
+
+.metric-head {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.4rem 1.8rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+}
+.metric-head:hover { background: rgba(255,255,255,.02); }
+
+.m-num { font-family: var(--mono); font-size: .65rem; color: var(--muted); }
+.m-title { font-family: var(--serif); font-size: 1.25rem; }
+.m-abbr {
+  font-family: var(--mono); font-size: .7rem;
+  padding: .25rem .7rem; border-radius: 2px;
+}
+
+/* accent by category */
+.traj  .m-abbr { background: rgba(61,217,197,.1);  color: var(--traj);  border: 1px solid rgba(61,217,197,.25); }
+.split .m-abbr { background: rgba(155,140,255,.1); color: var(--split); border: 1px solid rgba(155,140,255,.25); }
+.grad  .m-abbr { background: rgba(245,166,35,.1);  color: var(--grad);  border: 1px solid rgba(245,166,35,.25); }
+.repr  .m-abbr { background: rgba(240,98,146,.1);  color: var(--repr);  border: 1px solid rgba(240,98,146,.25); }
+.dec   .m-abbr { background: rgba(251,146,60,.1);  color: var(--decision); border: 1px solid rgba(251,146,60,.25); }
+.cons  .m-abbr { background: rgba(52,211,153,.1);  color: var(--cnoise2);  border: 1px solid rgba(52,211,153,.25); }
+
+.chevron { transition: transform .3s; color: var(--muted); font-size: .8rem; }
+.metric.open .chevron { transform: rotate(180deg); }
+
+.metric-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height .45s cubic-bezier(.4,0,.2,1);
+}
+.metric.open .metric-body { max-height: 3000px; }
+
+.body-inner {
+  padding: 0 1.8rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+@media(max-width:700px) { .body-inner { grid-template-columns: 1fr; } }
+
+.pane-label { font-family: var(--mono); font-size: .6rem; letter-spacing: .18em; color: var(--muted); text-transform: uppercase; margin-bottom: .7rem; }
+
+p { color: #8898bb; font-size: .9rem; margin-bottom: .65rem; }
+p:last-child { margin-bottom: 0; }
+strong { color: var(--text); font-weight: 600; }
+
+.formula {
+  background: var(--s2); border: 1px solid var(--border2);
+  border-radius: 3px; padding: 1rem 1.4rem;
+  font-family: var(--mono); font-size: .82rem; line-height: 2;
+}
+.fv  { color: #7eb8ff; }
+.fo  { color: #f5a623; }
+.ff  { color: #c084fc; }
+.fc  { color: #5a6380; font-size: .72rem; }
+.fhi { color: var(--traj); }
+.fr  { color: #f06292; }
+
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+.chip {
+  font-family: var(--mono); font-size: .62rem;
+  padding: .27rem .65rem; border-radius: 2px;
+}
+.ck { background: rgba(61,217,197,.08); color: var(--traj);  border: 1px solid rgba(61,217,197,.2); }
+.cr { background: rgba(240,98,146,.08); color: var(--repr);  border: 1px solid rgba(240,98,146,.2); }
+.cy { background: rgba(245,166,35,.08); color: var(--grad);  border: 1px solid rgba(245,166,35,.2); }
+.cp { background: rgba(155,140,255,.08);color: var(--split); border: 1px solid rgba(155,140,255,.2); }
+
+/* ─── FULL-WIDTH VIZ ─── */
+.viz-block {
+  margin: 0 1.8rem 2rem;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: rgba(13,15,22,.7);
+  overflow: hidden;
+}
+.viz-label {
+  font-family: var(--mono); font-size: .6rem;
+  letter-spacing: .12em; color: var(--muted);
+  padding: .7rem 1rem .5rem;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+}
+svg.viz { width: 100%; height: auto; display: block; overflow: visible; padding: 0 .5rem 1rem; }
+
+/* legend dots */
+.leg { display: flex; flex-wrap: wrap; gap: 1rem; padding: .6rem 1rem 1rem; }
+.leg-item { display: flex; align-items: center; gap: .5rem; font-family: var(--mono); font-size: .68rem; color: var(--muted); }
+.ldot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.lsq  { width: 14px; height: 8px; border-radius: 1px; flex-shrink: 0; }
+
+/* ─── SUMMARY TABLE ─── */
+.summary-wrap { margin-top: 5rem; border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; }
+.summary-head {
+  padding: 1.5rem 2rem;
+  background: var(--s1);
+  border-bottom: 1px solid var(--border2);
+  font-family: var(--serif); font-size: 1.4rem;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-family: var(--mono); font-size: .62rem;
+  letter-spacing: .1em; color: var(--muted); font-weight: 400;
+  padding: .7rem 1rem; border-bottom: 1px solid var(--border2);
+  background: var(--s2);
+}
+td { padding: .7rem 1rem; border-bottom: 1px solid var(--border); font-size: .82rem; color: #7888a8; vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,.018); }
+.td-metric { font-family: var(--mono); font-weight: 600; font-size: .78rem; }
+.td-cat { font-family: var(--mono); font-size: .65rem; padding: .15rem .5rem; border-radius: 2px; }
+
+/* anims */
+@keyframes growX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+header > * { animation: fadeUp .6s both; }
+header > *:nth-child(2) { animation-delay: .1s; }
+header > *:nth-child(3) { animation-delay: .22s; }
+header > *:nth-child(4) { animation-delay: .34s; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-kicker">Neural Training Dynamics — Visual Compendium</div>
+  <h1>From Margin to <em>Memory</em></h1>
+  <p class="h-sub">An illustrated reference for metrics that characterise individual training examples — how they are learned, forgotten, and why that matters.</p>
+</header>
+
+<nav>
+  <span class="nav-label">JUMP TO</span>
+  <span class="nav-cat nav-traj">Trajectory</span>
+  <a href="#aum">AUM</a>
+  <a href="#margin-cross">Margin Crossover</a>
+  <a href="#forget">Forgetting</a>
+  <a href="#fslt">FSLT</a>
+  <span class="nav-cat nav-split">Split-Based</span>
+  <a href="#ssft">SSFT</a>
+  <a href="#accf">accf / Joint</a>
+  <span class="nav-cat nav-grad">Gradient</span>
+  <a href="#el2n">EL2N</a>
+  <a href="#grand">GraNd</a>
+  <a href="#gradvar">GradVar</a>
+  <span class="nav-cat nav-repr">Representation</span>
+  <a href="#prepdepth">Pred Depth</a>
+  <a href="#proto">Prototypicality</a>
+  <span class="nav-cat nav-dec">Decision-Level</span>
+  <a href="#regret">Regret</a>
+  <a href="#plausible">Plausible Models</a>
+  <span class="nav-cat nav-cons">Constructive Noise</span>
+  <a href="#ir-bias">IR Boundary Bias</a>
+  <a href="#lnr">LNR</a>
+  <a href="#summary">∑ Table</a>
+</nav>
+
+<main>
+
+<!-- ╔════════════════════════════════════════════════════════╗
+     ║  CATEGORY 1 — TRAJECTORY-BASED                       ║
+     ╚════════════════════════════════════════════════════════╝ -->
+<div class="cat-band traj">
+  <span class="cat-icon">📈</span>
+  <div>
+    <div class="cat-name traj">Trajectory-Based Metrics</div>
+    <div class="cat-desc">Computed from the model's per-epoch predictions across the full training run. Capture <em>how</em> and <em>when</em> examples are learned, with what consistency.</div>
+  </div>
+  <div class="cat-pill">Requires full training run</div>
+</div>
+
+<div class="cat-metrics traj">
+
+  <!-- AUM -->
+  <div class="metric traj" id="aum">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">01</span>
+      <span class="m-title">Area Under the Margin</span>
+      <span class="m-abbr">AUM</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>At every training step the model outputs a logit for each class. The <strong>margin</strong> is the true-class logit minus the highest competing logit. AUM accumulates this gap across all epochs.</p>
+          <p>A <strong>consistently positive</strong> margin → easy/clean. A margin that dips negative and stays there → model keeps preferring the wrong class → likely mislabeled.</p>
+          <div class="chips">
+            <span class="chip ck">↑ High AUM → clean / easy</span>
+            <span class="chip cr">↓ Neg AUM → mislabeled</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="ff">AUM</span>(<span class="fv">x</span>) = <span class="fo">1/T</span> <span class="fo">∑</span><sub>t=1</sub><sup>T</sup><br>
+            &nbsp;&nbsp;[ <span class="ff">logit</span>(<span class="fhi">ŷ<sub>y</sub></span><sup>(t)</sup>) <span class="fo">−</span> <span class="ff">max</span><sub class="fv">c≠y</sub> <span class="ff">logit</span>(<span class="fhi">ŷ<sub>c</sub></span><sup>(t)</sup>) ]<br><br>
+            <span class="fc">// y = true label</span><br>
+            <span class="fc">// T = total epochs tracked</span><br>
+            <span class="fc">// Negative AUM → likely mislabeled</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Margin trajectory — three example types across 40 epochs</div>
+        <svg class="viz" viewBox="0 0 860 220">
+          <line x1="50" y1="180" x2="840" y2="180" stroke="#1e2230" stroke-width="1"/>
+          <line x1="50" y1="10" x2="50" y2="180" stroke="#1e2230" stroke-width="1"/>
+          <line x1="50" y1="95" x2="840" y2="95" stroke="#2a3045" stroke-width="1" stroke-dasharray="5 4"/>
+          <text x="42" y="99" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="9">0</text>
+          <text x="42" y="18" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="9">+</text>
+          <text x="42" y="178" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="9">−</text>
+          <!-- Easy -->
+          <path d="M55,160 C90,140 150,100 220,70 C310,38 430,22 840,18" fill="none" stroke="#3dd9c5" stroke-width="2.2"/>
+          <path d="M55,160 C90,140 150,100 220,70 C310,38 430,22 840,18 L840,95 L55,95Z" fill="rgba(61,217,197,.06)"/>
+          <text x="680" y="14" fill="#3dd9c5" font-family="Syne Mono" font-size="9">Easy — high AUM</text>
+          <!-- Hard ambiguous -->
+          <path d="M55,98 C120,94 230,88 380,82 C520,78 680,86 840,83" fill="none" stroke="#f5a623" stroke-width="2" stroke-dasharray="7 3"/>
+          <text x="580" y="75" fill="#f5a623" font-family="Syne Mono" font-size="9">Hard — low AUM ≈ 0</text>
+          <!-- Mislabeled -->
+          <path d="M55,85 C90,102 160,130 280,152 C420,170 600,175 840,180" fill="none" stroke="#f06292" stroke-width="2.2"/>
+          <path d="M55,85 C90,102 160,130 280,152 C420,170 600,175 840,180 L840,95 L55,95Z" fill="rgba(240,98,146,.06)"/>
+          <text x="490" y="185" fill="#f06292" font-family="Syne Mono" font-size="9">Mislabeled — negative AUM</text>
+          <!-- ticks -->
+          <g fill="#5a6380" font-family="Syne Mono" font-size="8">
+            <text x="55" y="194">0</text><text x="245" y="194">10</text>
+            <text x="440" y="194">20</text><text x="635" y="194">30</text><text x="825" y="194">40</text>
+            <text x="445" y="210" text-anchor="middle">EPOCH →</text>
+          </g>
+          <text x="18" y="95" fill="#5a6380" font-family="Syne Mono" font-size="8" transform="rotate(-90,18,95)">MARGIN</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- MARGIN CROSSOVER -->
+  <div class="metric traj" id="margin-cross">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">02</span>
+      <span class="m-title">Margin Crossover Taxonomy</span>
+      <span class="m-abbr">MCT</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>The margin starts negative for almost every sample (the model initially can't classify anything). The <strong>epoch at which the margin first crosses zero</strong> and stays positive tells us a great deal about sample complexity:</p>
+          <p><strong>Early crossover (0–20% of epochs)</strong> → the model grasps this example quickly. Mildly complex but prototypical. <strong>Mid crossover (20–60%)</strong> → example requires substantial learning. Genuinely complex sub-population. <strong>Late / never crossover (&gt;80% or never)</strong> → model never confidently memorises → highly likely to be a noisy or contradictory label.</p>
+          <div class="chips">
+            <span class="chip ck">Cross early → mildly complex</span>
+            <span class="chip cy">Cross mid → heavily complex</span>
+            <span class="chip cr">Never cross → noisy label</span>
+            <span class="chip cp">Sparse positive → ambiguous</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Definition</div>
+          <div class="formula">
+            <span class="ff">margin</span><sup>(t)</sup>(<span class="fv">x</span>) = <span class="ff">logit</span>(<span class="fhi">ŷ<sub>y</sub></span><sup>(t)</sup>) <span class="fo">−</span> <span class="ff">max</span><sub class="fv">c≠y</sub> <span class="ff">logit</span>(<span class="fv">ŷ<sub>c</sub></span><sup>(t)</sup>)<br><br>
+            <span class="ff">τ*</span>(<span class="fv">x</span>) = <span class="ff">min</span>{ <span class="fv">t</span> : <span class="ff">margin</span><sup>(t')</sup> > 0  ∀ <span class="fv">t'</span> ≥ <span class="fv">t</span> }<br><br>
+            <span class="fc">// τ* ≤ 0.20·T  → mild complexity</span><br>
+            <span class="fc">// τ* ∈ (0.20,0.60)·T → heavy complexity</span><br>
+            <span class="fc">// τ* > 0.80·T or ∄ → noisy label</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Margin crossover — four sample archetypes over 50 epochs</div>
+        <svg class="viz" viewBox="0 0 860 300">
+          <defs>
+            <marker id="arrT" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0.5 L4.5,2.5 L0,4.5Z" fill="#5a6380"/></marker>
+          </defs>
+          <!-- axes -->
+          <line x1="60" y1="250" x2="840" y2="250" stroke="#1e2230" stroke-width="1"/>
+          <line x1="60" y1="20" x2="60" y2="250" stroke="#1e2230" stroke-width="1"/>
+          <!-- zero line -->
+          <line x1="60" y1="145" x2="840" y2="145" stroke="#2a3045" stroke-width="1" stroke-dasharray="5 4"/>
+          <text x="50" y="148" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="9">0</text>
+
+          <!-- 20% epoch marker -->
+          <line x1="214" y1="20" x2="214" y2="250" stroke="rgba(61,217,197,.15)" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="214" y="16" text-anchor="middle" fill="rgba(61,217,197,.5)" font-family="Syne Mono" font-size="8">20%</text>
+
+          <!-- 60% epoch marker -->
+          <line x1="528" y1="20" x2="528" y2="250" stroke="rgba(245,166,35,.15)" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="528" y="16" text-anchor="middle" fill="rgba(245,166,35,.5)" font-family="Syne Mono" font-size="8">60%</text>
+
+          <!-- 80% epoch marker -->
+          <line x1="684" y1="20" x2="684" y2="250" stroke="rgba(240,98,146,.12)" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="684" y="16" text-anchor="middle" fill="rgba(240,98,146,.45)" font-family="Syne Mono" font-size="8">80%</text>
+
+          <!-- === TYPE 1: Mildly complex — crosses at epoch ~8 (~16%) === -->
+          <!-- pre-cross: negative -->
+          <path d="M65,190 C80,178 110,168 150,155 C175,147 195,143 214,142" fill="none" stroke="#3dd9c5" stroke-width="2.5"/>
+          <!-- post-cross: positive, rising -->
+          <path d="M214,142 C230,130 280,95 350,65 C440,38 580,28 840,22" fill="none" stroke="#3dd9c5" stroke-width="2.5"/>
+          <!-- crossover dot -->
+          <circle cx="214" cy="142" r="5" fill="#3dd9c5"/>
+          <text x="225" y="60" fill="#3dd9c5" font-family="Syne Mono" font-size="9">① Mild</text>
+          <text x="225" y="72" fill="#3dd9c5" font-family="Syne Mono" font-size="8">τ* ≈ 8 ep.</text>
+          <!-- shaded area after cross -->
+          <path d="M214,142 C230,130 280,95 350,65 C440,38 580,28 840,22 L840,145 L214,145Z" fill="rgba(61,217,197,.07)"/>
+
+          <!-- === TYPE 2: Heavily complex — crosses at epoch ~28 (~56%) === -->
+          <path d="M65,210 C100,205 160,198 230,188 C320,175 400,162 450,155 C490,150 510,148 528,145" fill="none" stroke="#f5a623" stroke-width="2.5"/>
+          <path d="M528,145 C550,130 600,100 660,78 C720,60 780,50 840,46" fill="none" stroke="#f5a623" stroke-width="2.5"/>
+          <circle cx="528" cy="145" r="5" fill="#f5a623"/>
+          <text x="540" y="110" fill="#f5a623" font-family="Syne Mono" font-size="9">② Heavy</text>
+          <text x="540" y="122" fill="#f5a623" font-family="Syne Mono" font-size="8">τ* ≈ 28 ep.</text>
+          <path d="M528,145 C550,130 600,100 660,78 C720,60 780,50 840,46 L840,145 L528,145Z" fill="rgba(245,166,35,.06)"/>
+
+          <!-- === TYPE 3: Noisy label — margin flickers, never truly crosses === -->
+          <path d="M65,220 C100,215 130,222 165,208 C200,195 220,205 260,198 C310,188 340,200 385,190 C430,180 460,195 510,185 C560,175 600,190 650,182 C700,174 740,186 780,180 C810,175 830,178 840,176" fill="none" stroke="#f06292" stroke-width="2" stroke-dasharray="1 0"/>
+          <!-- a few brief excursions above 0 that come back down - shown as tiny humps -->
+          <path d="M385,190 C400,148 420,138 440,152" fill="none" stroke="#f06292" stroke-width="2" stroke-dasharray="4 2" opacity=".6"/>
+          <text x="360" y="225" fill="#f06292" font-family="Syne Mono" font-size="9">③ Noisy label — margin flickers, never stabilises positive</text>
+
+          <!-- === TYPE 4: Ambiguous / rare — late cross at 42 ep (~84%) === -->
+          <path d="M65,230 C130,228 230,225 330,222 C450,218 560,215 640,210 C680,207 684,145 684,145" fill="none" stroke="#9b8cff" stroke-width="2" stroke-dasharray="5 3"/>
+          <path d="M684,145 C710,120 760,85 840,72" fill="none" stroke="#9b8cff" stroke-width="2.5"/>
+          <circle cx="684" cy="145" r="5" fill="#9b8cff"/>
+          <text x="695" y="95" fill="#9b8cff" font-family="Syne Mono" font-size="9">④ Rare / late</text>
+          <text x="695" y="107" fill="#9b8cff" font-family="Syne Mono" font-size="8">τ* ≈ 42 ep.</text>
+
+          <!-- epoch ticks -->
+          <g fill="#5a6380" font-family="Syne Mono" font-size="8">
+            <text x="65" y="264">0</text><text x="215" y="264">10</text>
+            <text x="375" y="264">20</text><text x="530" y="264">28</text>
+            <text x="680" y="264">40</text><text x="835" y="264">50</text>
+            <text x="450" y="280" text-anchor="middle">EPOCH →</text>
+          </g>
+          <text x="18" y="145" fill="#5a6380" font-family="Syne Mono" font-size="8" transform="rotate(-90,18,145)">MARGIN</text>
+        </svg>
+        <div class="leg">
+          <div class="leg-item"><div class="ldot" style="background:#3dd9c5"></div>Mild: crosses &lt;20% epochs — prototypical</div>
+          <div class="leg-item"><div class="ldot" style="background:#f5a623"></div>Heavy: crosses 20–60% — genuinely complex</div>
+          <div class="leg-item"><div class="ldot" style="background:#9b8cff"></div>Rare/late: crosses &gt;80% — underrepresented</div>
+          <div class="leg-item"><div class="ldot" style="background:#f06292"></div>Noisy: never stabilises — likely mislabeled</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORGETTING EVENTS -->
+  <div class="metric traj" id="forget">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">03</span>
+      <span class="m-title">Forgetting Events</span>
+      <span class="m-abbr">FE</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>A <strong>forgetting event</strong> is when a correctly-classified example at epoch t becomes incorrect at epoch t+1. The total count over training signals boundary instability.</p>
+          <p>Examples with <strong>zero forgettings</strong> (unforgettable) are redundant and safely prunable. Frequently-forgotten examples straddle the decision boundary and carry high informational value.</p>
+          <div class="chips">
+            <span class="chip ck">0 events → prune safely</span>
+            <span class="chip cr">Many events → keep</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="ff">acc</span><sup>(t)</sup>(<span class="fv">x</span>) = <span class="fo">𝟙</span>[<span class="ff">argmax</span> <span class="fv">p̂</span><sup>(t)</sup>(<span class="fv">x</span>) = <span class="fv">y</span>]<br><br>
+            <span class="ff">FE</span>(<span class="fv">x</span>) = <span class="fo">∑</span><sub>t=1</sub><sup>T-1</sup> <span class="fo">𝟙</span>[<span class="ff">acc</span><sup>(t+1)</sup> &lt; <span class="ff">acc</span><sup>(t)</sup>]<br><br>
+            <span class="fc">// counts correct→incorrect transitions</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Correctness timeline across 40 epochs</div>
+        <svg class="viz" viewBox="0 0 860 220">
+          <line x1="80" y1="200" x2="840" y2="200" stroke="#1e2230" stroke-width="1"/>
+          <!-- row labels -->
+          <text x="72" y="42" text-anchor="end" fill="#3dd9c5" font-family="Syne Mono" font-size="8">Unforgettable</text>
+          <text x="72" y="94" text-anchor="end" fill="#7eb8ff" font-family="Syne Mono" font-size="8">Learned once</text>
+          <text x="72" y="146" text-anchor="end" fill="#f5a623" font-family="Syne Mono" font-size="8">Oscillating</text>
+          <text x="72" y="198" text-anchor="end" fill="#f06292" font-family="Syne Mono" font-size="8">Never learned</text>
+          <!-- Row 1: learned at epoch 2, never forgotten -->
+          <rect x="80" y="26" width="38" height="20" fill="rgba(240,98,146,.35)" rx="1"/>
+          <rect x="118" y="26" width="18" height="20" fill="rgba(240,98,146,.35)" rx="1"/>
+          <rect x="136" y="26" width="704" height="20" fill="rgba(61,217,197,.3)" rx="1"/>
+          <text x="488" y="41" text-anchor="middle" fill="rgba(61,217,197,.7)" font-family="Syne Mono" font-size="8">✓ Correct (0 forgettings)</text>
+          <!-- Row 2: learned at epoch 15 -->
+          <rect x="80" y="78" width="288" height="20" fill="rgba(240,98,146,.22)" rx="1"/>
+          <rect x="368" y="78" width="472" height="20" fill="rgba(126,184,255,.25)" rx="1"/>
+          <text x="606" y="93" text-anchor="middle" fill="rgba(126,184,255,.7)" font-family="Syne Mono" font-size="8">✓ correct from ep.15</text>
+          <!-- Row 3: oscillating -->
+          <rect x="80"  y="130" width="38" height="20" fill="rgba(240,98,146,.3)" rx="1"/>
+          <rect x="118" y="130" width="58" height="20" fill="rgba(245,166,35,.25)" rx="1"/>
+          <rect x="176" y="130" width="28" height="20" fill="rgba(240,98,146,.3)" rx="1"/>
+          <rect x="204" y="130" width="76" height="20" fill="rgba(245,166,35,.25)" rx="1"/>
+          <rect x="280" y="130" width="38" height="20" fill="rgba(240,98,146,.3)" rx="1"/>
+          <rect x="318" y="130" width="96" height="20" fill="rgba(245,166,35,.25)" rx="1"/>
+          <rect x="414" y="130" width="48" height="20" fill="rgba(240,98,146,.3)" rx="1"/>
+          <rect x="462" y="130" width="116" height="20" fill="rgba(245,166,35,.25)" rx="1"/>
+          <rect x="578" y="130" width="38" height="20" fill="rgba(240,98,146,.3)" rx="1"/>
+          <rect x="616" y="130" width="224" height="20" fill="rgba(245,166,35,.25)" rx="1"/>
+          <text x="460" y="124" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="8">↑ 7 forgetting events</text>
+          <!-- Row 4 -->
+          <rect x="80" y="182" width="760" height="20" fill="rgba(240,98,146,.18)" rx="1"/>
+          <text x="460" y="197" text-anchor="middle" fill="rgba(240,98,146,.6)" font-family="Syne Mono" font-size="8">✗ never correct</text>
+          <!-- epoch ticks -->
+          <g fill="#5a6380" font-family="Syne Mono" font-size="8">
+            <text x="80" y="213">0</text><text x="268" y="213">10</text>
+            <text x="460" y="213">20</text><text x="650" y="213">30</text>
+            <text x="828" y="213">40</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- FSLT -->
+  <div class="metric traj" id="fslt">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">04</span>
+      <span class="m-title">First-Split Learning Time</span>
+      <span class="m-abbr">FSLT</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>FSLT records <strong>the earliest epoch after which a sample is classified correctly for all remaining epochs</strong>. Unlike forgetting events (which count every flip), FSLT identifies when the model has <em>permanently committed</em> to the right answer.</p>
+          <p>FSLT correlates strongly with sub-group frequency — <strong>rare examples are learned late</strong> (high FSLT), and complex examples are also learned late, making the two difficult to separate using FSLT alone.</p>
+          <div class="chips">
+            <span class="chip ck">Low FSLT → typical / easy</span>
+            <span class="chip cy">High FSLT → rare or complex</span>
+            <span class="chip cr">∄ FSLT → mislabeled</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula (Maini et al. 2022)</div>
+          <div class="formula">
+            <span class="ff">FSLT</span>(<span class="fv">x<sub>i</sub></span>, <span class="fv">y<sub>i</sub></span>) = <span class="ff">argmin</span><sub class="fv">t*</sub><br>
+            &nbsp;&nbsp;( <span class="fv">ŷ<sup>t</sup></span> = <span class="fv">y<sub>i</sub></span>  ∀ <span class="fv">t</span> ≥ <span class="fv">t*</span> )<br><br>
+            <span class="fc">// smallest t after which correct always</span><br>
+            <span class="fc">// = ∞ if never stably correct (mislabeled)</span>
+          </div>
+          <p style="margin-top:.8rem;font-size:.82rem;">Note: FSLT does <em>not</em> distinguish rare vs complex examples — both have high values. That's where SSFT comes in (see next section).</p>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">FSLT distribution across example types — simulated dataset</div>
+        <svg class="viz" viewBox="0 0 860 200">
+          <line x1="60" y1="170" x2="840" y2="170" stroke="#1e2230" stroke-width="1"/>
+          <line x1="60" y1="20" x2="60" y2="170" stroke="#1e2230" stroke-width="1"/>
+          <!-- Typical: learned early (low FSLT) — dense pile left -->
+          <rect x="65"  y="70" width="40" height="100" fill="rgba(61,217,197,.3)" rx="2"/>
+          <rect x="110" y="50" width="40" height="120" fill="rgba(61,217,197,.32)" rx="2"/>
+          <rect x="155" y="65" width="40" height="105" fill="rgba(61,217,197,.28)" rx="2"/>
+          <rect x="200" y="95" width="40" height="75" fill="rgba(61,217,197,.2)" rx="2"/>
+          <rect x="245" y="118" width="40" height="52" fill="rgba(61,217,197,.15)" rx="2"/>
+          <!-- Rare/Complex: high FSLT -->
+          <rect x="310" y="140" width="40" height="30" fill="rgba(245,166,35,.3)" rx="2"/>
+          <rect x="360" y="132" width="40" height="38" fill="rgba(245,166,35,.32)" rx="2"/>
+          <rect x="410" y="125" width="40" height="45" fill="rgba(245,166,35,.3)" rx="2"/>
+          <rect x="460" y="130" width="40" height="40" fill="rgba(245,166,35,.25)" rx="2"/>
+          <rect x="510" y="140" width="40" height="30" fill="rgba(245,166,35,.2)" rx="2"/>
+          <!-- Rare: similar peak to complex — can't distinguish -->
+          <rect x="560" y="128" width="40" height="42" fill="rgba(155,140,255,.28)" rx="2"/>
+          <rect x="610" y="122" width="40" height="48" fill="rgba(155,140,255,.3)" rx="2"/>
+          <rect x="660" y="135" width="40" height="35" fill="rgba(155,140,255,.25)" rx="2"/>
+          <!-- Mislabeled: very high / never learned -->
+          <rect x="750" y="148" width="40" height="22" fill="rgba(240,98,146,.35)" rx="2"/>
+          <rect x="795" y="153" width="40" height="17" fill="rgba(240,98,146,.3)" rx="2"/>
+          <!-- legend arrows -->
+          <text x="155" y="44" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="8">Typical (learned early)</text>
+          <text x="440" y="110" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="8">Complex</text>
+          <text x="630" y="108" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="8">Rare</text>
+          <text x="800" y="135" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="8">Mislabeled</text>
+          <!-- overlap annotation -->
+          <rect x="300" y="100" width="410" height="16" rx="2" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)" stroke-width=".5"/>
+          <text x="505" y="112" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">⚠ Complex &amp; Rare overlap here — FSLT alone can't separate them</text>
+          <!-- x axis labels -->
+          <g fill="#5a6380" font-family="Syne Mono" font-size="8">
+            <text x="65" y="184">early</text>
+            <text x="440" y="184" text-anchor="middle">FIRST-SPLIT LEARNING TIME →</text>
+            <text x="820" y="184">late / ∞</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /cat-metrics traj -->
+
+
+<!-- ╔════════════════════════════════════════════════════════╗
+     ║  CATEGORY 2 — SPLIT-BASED (SSFT paper)               ║
+     ╚════════════════════════════════════════════════════════╝ -->
+<div class="cat-band split" style="margin-top:3rem">
+  <span class="cat-icon">✂</span>
+  <div>
+    <div class="cat-name split">Split-Based Metrics</div>
+    <div class="cat-desc">Train on partition A, then fine-tune on partition B. Measure which partition-A examples are <em>forgotten</em> — exposing a complementary axis of hardness invisible to first-split metrics alone. <em>Maini, Garg, Lipton, Kolter (NeurIPS 2022)</em></div>
+  </div>
+  <div class="cat-pill">Requires 2-phase training</div>
+</div>
+
+<div class="cat-metrics split">
+
+  <!-- SSFT -->
+  <div class="metric split" id="ssft">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">05</span>
+      <span class="m-title">Second-Split Forgetting Time</span>
+      <span class="m-abbr">SSFT</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>After training to convergence on split A, the model is <em>continued</em> on a held-out split B. SSFT records <strong>how quickly split-A examples are forgotten</strong> during this second phase.</p>
+          <p><strong>Mislabeled</strong> examples are forgotten almost immediately (they were memorised with a brittle pattern — as soon as the model sees real data it overwrites). <strong>Complex</strong> examples are <em>never forgotten</em> (the model learned a real feature). <strong>Rare</strong> examples are forgotten slowly as split-B data pulls the model away.</p>
+          <p>This separates rare vs mislabeled — something FSLT cannot do.</p>
+          <div class="chips">
+            <span class="chip cr">Low SSFT → mislabeled</span>
+            <span class="chip cy">Mid SSFT → rare examples</span>
+            <span class="chip cp">∄ SSFT (never forgotten) → complex / typical</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula (Maini et al. 2022)</div>
+          <div class="formula">
+            <span class="fhi">Phase 1:</span> Train <span class="fv">f<sub>A</sub></span> on S<sub>A</sub> to convergence<br><br>
+            <span class="fhi">Phase 2:</span> Fine-tune <span class="fv">f<sub>A→B</sub></span> on S<sub>B</sub><br><br>
+            <span class="ff">SSFT</span>(<span class="fv">x<sub>i</sub></span>) = <span class="ff">argmin</span><sub class="fv">t*</sub><br>
+            &nbsp;&nbsp;( <span class="fv">ŷ<sup>t</sup><sub>A→B</sub></span> ≠ <span class="fv">y<sub>i</sub></span>  ∀ <span class="fv">t</span> ≥ <span class="fv">t*</span> )<br><br>
+            <span class="fc">// smallest t after which WRONG always</span><br>
+            <span class="fc">// low SSFT → forgotten fast → mislabeled</span><br>
+            <span class="fc">// ∄ SSFT → never forgotten → complex</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Second-split accuracy curves — four example types (log scale)</div>
+        <svg class="viz" viewBox="0 0 860 260">
+          <!-- axes -->
+          <line x1="60" y1="220" x2="840" y2="220" stroke="#1e2230" stroke-width="1"/>
+          <line x1="60" y1="20" x2="60" y2="220" stroke="#1e2230" stroke-width="1"/>
+          <text x="50" y="224" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="8">0</text>
+          <text x="50" y="26" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="8">1.0</text>
+          <line x1="60" y1="120" x2="840" y2="120" stroke="#2a3045" stroke-width="1" stroke-dasharray="4 4"/>
+          <text x="50" y="123" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="8">.5</text>
+
+          <!-- Typical: correct throughout, never forgotten -->
+          <path d="M65,26 C120,26 300,26 840,28" fill="none" stroke="#3dd9c5" stroke-width="2.5"/>
+          <text x="660" y="22" fill="#3dd9c5" font-family="Syne Mono" font-size="8">Typical — never forgotten</text>
+
+          <!-- Complex: drops slightly, recovers, never fully forgotten -->
+          <path d="M65,28 C100,30 150,38 220,52 C300,70 380,85 460,95 C560,105 680,90 840,70" fill="none" stroke="#9b8cff" stroke-width="2.5"/>
+          <text x="380" y="80" fill="#9b8cff" font-family="Syne Mono" font-size="8">Complex — slow drift, stays above chance</text>
+
+          <!-- Rare: learns then slowly forgotten -->
+          <path d="M65,30 C100,35 160,50 250,75 C360,108 480,142 620,168 C720,188 800,212 840,218" fill="none" stroke="#f5a623" stroke-width="2.5"/>
+          <text x="310" y="105" fill="#f5a623" font-family="Syne Mono" font-size="8">Rare — slowly forgotten as split-B data pulls model</text>
+
+          <!-- Mislabeled: drops almost immediately -->
+          <path d="M65,28 C70,40 75,80 80,120 C85,160 88,195 90,220" fill="none" stroke="#f06292" stroke-width="2.5"/>
+          <circle cx="90" cy="220" r="4" fill="#f06292"/>
+          <text x="100" y="170" fill="#f06292" font-family="Syne Mono" font-size="8">Mislabeled — forgotten by epoch 3</text>
+          <!-- SSFT arrow annotation for mislabeled -->
+          <line x1="90" y1="218" x2="90" y2="30" stroke="rgba(240,98,146,.2)" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="95" y="36" fill="rgba(240,98,146,.6)" font-family="Syne Mono" font-size="7">SSFT=3</text>
+
+          <!-- x-axis: log scale indication -->
+          <g fill="#5a6380" font-family="Syne Mono" font-size="8">
+            <text x="65" y="235">ep.1</text>
+            <text x="200" y="235">10</text>
+            <text x="400" y="235">100</text>
+            <text x="700" y="235">1000</text>
+            <text x="450" y="252" text-anchor="middle">SECOND-SPLIT EPOCH (log scale) →</text>
+          </g>
+          <text x="20" y="120" fill="#5a6380" font-family="Syne Mono" font-size="8" transform="rotate(-90,20,120)">ACCURACY ON SPLIT-A</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Learning-Forgetting Spectrum -->
+  <div class="metric split" id="accf">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">06</span>
+      <span class="m-title">Learning–Forgetting Spectrum &amp; Joint Metric</span>
+      <span class="m-abbr">FSLT × SSFT</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>The real power emerges when plotting <strong>FSLT on the x-axis</strong> and <strong>SSFT on the y-axis</strong> together, creating a 2D spectrum with four quadrants that fully characterise example type.</p>
+          <p>The paper also introduces <strong>accf</strong> — the cumulative accuracy during second-split training (analogous to how accl stabilises FSLT). And a <strong>Joint metric</strong> that combines FSLT and SSFT ranks, achieving the highest AUC for mislabeled detection across all benchmarks.</p>
+          <div class="formula" style="margin-top:.5rem; font-size:.78rem;">
+            <span class="ff">acc<sub>f</sub></span>(<span class="fv">x</span>) = <span class="fo">1/T₂</span> <span class="fo">∑</span><sub>t</sub> <span class="fo">𝟙</span>[<span class="fv">ŷ<sup>t</sup><sub>A→B</sub></span> = <span class="fv">y</span>]<br><br>
+            <span class="ff">Joint</span>(<span class="fv">x</span>) = rank(<span class="ff">FSLT</span>) <span class="fo">+</span> rank(<span class="ff">SSFT</span>)
+          </div>
+          <div class="chips" style="margin-top:.8rem">
+            <span class="chip cp">Highest AUC for noise detection</span>
+            <span class="chip cr">Separates all 4 example types</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">The 4-Quadrant Spectrum</div>
+          <svg viewBox="0 0 300 260" style="width:100%;height:auto;display:block;">
+            <!-- axes -->
+            <line x1="30" y1="230" x2="290" y2="230" stroke="#2a3045" stroke-width="1.5" marker-end="url(#arrT)"/>
+            <line x1="30" y1="230" x2="30" y2="10" stroke="#2a3045" stroke-width="1.5" marker-end="url(#arrT)"/>
+            <!-- zero dividers -->
+            <line x1="30" y1="130" x2="290" y2="130" stroke="#1e2230" stroke-width="1" stroke-dasharray="4 3"/>
+            <line x1="160" y1="230" x2="160" y2="10" stroke="#1e2230" stroke-width="1" stroke-dasharray="4 3"/>
+            <!-- Q1: Typical (low FSLT, high SSFT / never forgotten) -->
+            <rect x="32" y="12" width="126" height="116" fill="rgba(61,217,197,.04)" rx="2"/>
+            <text x="95" y="58" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="9" font-weight="600">Typical</text>
+            <text x="95" y="72" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Learned early</text>
+            <text x="95" y="84" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Never forgotten</text>
+            <!-- scattered dots -->
+            <circle cx="60" cy="30" r="4" fill="rgba(61,217,197,.6)"/>
+            <circle cx="85" cy="45" r="3" fill="rgba(61,217,197,.5)"/>
+            <circle cx="105" cy="35" r="4" fill="rgba(61,217,197,.6)"/>
+            <circle cx="70" cy="60" r="3" fill="rgba(61,217,197,.5)"/>
+            <circle cx="130" cy="40" r="3.5" fill="rgba(61,217,197,.4)"/>
+            <!-- Q2: Mislabeled (high FSLT, low SSFT — forgotten fast) -->
+            <rect x="162" y="132" width="126" height="96" fill="rgba(240,98,146,.04)" rx="2"/>
+            <text x="225" y="168" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="9" font-weight="600">Mislabeled</text>
+            <text x="225" y="182" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Learned late</text>
+            <text x="225" y="194" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Forgotten fast</text>
+            <circle cx="190" cy="210" r="4" fill="rgba(240,98,146,.6)"/>
+            <circle cx="220" cy="218" r="3.5" fill="rgba(240,98,146,.5)"/>
+            <circle cx="255" cy="205" r="4" fill="rgba(240,98,146,.55)"/>
+            <circle cx="270" cy="215" r="3" fill="rgba(240,98,146,.45)"/>
+            <!-- Q3: Complex (high FSLT, high SSFT) -->
+            <rect x="162" y="12" width="126" height="116" fill="rgba(155,140,255,.04)" rx="2"/>
+            <text x="225" y="58" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="9" font-weight="600">Complex</text>
+            <text x="225" y="72" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Learned late</text>
+            <text x="225" y="84" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Never forgotten</text>
+            <circle cx="200" cy="32" r="3.5" fill="rgba(155,140,255,.6)"/>
+            <circle cx="240" cy="44" r="4" fill="rgba(155,140,255,.55)"/>
+            <circle cx="270" cy="30" r="3" fill="rgba(155,140,255,.5)"/>
+            <!-- Q4: Rare (depends) -->
+            <rect x="32" y="132" width="126" height="96" fill="rgba(245,166,35,.04)" rx="2"/>
+            <text x="95" y="168" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="9" font-weight="600">Rare</text>
+            <text x="95" y="182" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Learned late</text>
+            <text x="95" y="194" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Slowly forgotten</text>
+            <circle cx="65" cy="175" r="3.5" fill="rgba(245,166,35,.55)"/>
+            <circle cx="95" cy="195" r="4" fill="rgba(245,166,35,.5)"/>
+            <circle cx="130" cy="182" r="3" fill="rgba(245,166,35,.45)"/>
+            <!-- axis labels -->
+            <text x="160" y="248" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">FSLT →  (learned late)</text>
+            <text x="12" y="120" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8" transform="rotate(-90,12,120)">SSFT ↑ (forgotten late)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /cat-metrics split -->
+
+
+<!-- ╔════════════════════════════════════════════════════════╗
+     ║  CATEGORY 3 — GRADIENT-BASED                         ║
+     ╚════════════════════════════════════════════════════════╝ -->
+<div class="cat-band grad" style="margin-top:3rem">
+  <span class="cat-icon">∇</span>
+  <div>
+    <div class="cat-name grad">Gradient-Based Metrics</div>
+    <div class="cat-desc">Derived from the gradient of the loss with respect to model parameters. Measure how much each sample pushes the model — either in magnitude (GraNd, EL2N) or directional consistency (GradVar).</div>
+  </div>
+  <div class="cat-pill">Requires backward pass</div>
+</div>
+
+<div class="cat-metrics grad">
+
+  <!-- EL2N -->
+  <div class="metric grad" id="el2n">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">07</span>
+      <span class="m-title">Error L2 Norm</span>
+      <span class="m-abbr">EL2N</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>Measures the <strong>Euclidean distance between the model's predicted probability vector and the one-hot true label</strong> at an early checkpoint (typically epoch 5–20).</p>
+          <p>Large EL2N → model is far from correct prediction → hard, keep. Small EL2N → model already approximately correct → redundant, prune.</p>
+          <div class="chips">
+            <span class="chip cr">Large → hard / keep</span>
+            <span class="chip ck">Small → redundant / prune</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="ff">EL2N</span>(<span class="fv">x</span>, <span class="fv">y</span>) = <span class="fo">𝔼</span><sub>init</sub> ‖ <span class="fv">p̂</span>(<span class="fv">x</span>) <span class="fo">−</span> <span class="fv">e<sub>y</sub></span> ‖<sub>2</sub><br><br>
+            <span class="fc">// p̂(x)  = softmax output</span><br>
+            <span class="fc">// e_y   = one-hot label vector</span><br>
+            <span class="fc">// 𝔼_init = avg over multiple inits</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Error vector magnitude — 3 examples in a 3-class problem</div>
+        <svg class="viz" viewBox="0 0 860 200">
+          <!-- Easy -->
+          <g transform="translate(30,20)">
+            <text x="120" y="0" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="9">EASY</text>
+            <rect x="0" y="12" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="12" width="220" height="16" fill="rgba(61,217,197,.3)" rx="2"/>
+            <text x="246" y="24" fill="#3dd9c5" font-family="Syne Mono" font-size="8">0.92←y</text>
+            <rect x="0" y="32" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="32" width="12" height="16" fill="rgba(126,184,255,.3)" rx="2"/>
+            <text x="246" y="44" fill="#5a6380" font-family="Syne Mono" font-size="8">0.05</text>
+            <rect x="0" y="52" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="52" width="7" height="16" fill="rgba(126,184,255,.3)" rx="2"/>
+            <text x="246" y="64" fill="#5a6380" font-family="Syne Mono" font-size="8">0.03</text>
+            <text x="120" y="90" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">error = p̂ − e_y</text>
+            <rect x="0" y="98" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="112" y="98" width="10" height="14" fill="rgba(240,98,146,.5)" rx="1"/>
+            <rect x="0" y="116" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="112" y="116" width="4" height="14" fill="rgba(240,98,146,.3)" rx="1"/>
+            <rect x="0" y="134" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="112" y="134" width="2" height="14" fill="rgba(240,98,146,.3)" rx="1"/>
+            <rect x="0" y="158" width="240" height="28" fill="rgba(61,217,197,.05)" stroke="rgba(61,217,197,.2)" stroke-width="1" rx="2"/>
+            <text x="120" y="170" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">EL2N</text>
+            <text x="120" y="182" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="14" font-weight="600">0.09</text>
+          </g>
+          <!-- Hard -->
+          <g transform="translate(310,20)">
+            <text x="120" y="0" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="9">HARD</text>
+            <rect x="0" y="12" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="12" width="96" height="16" fill="rgba(61,217,197,.2)" rx="2"/>
+            <text x="246" y="24" fill="#3dd9c5" font-family="Syne Mono" font-size="8">0.40←y</text>
+            <rect x="0" y="32" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="32" width="84" height="16" fill="rgba(126,184,255,.3)" rx="2"/>
+            <text x="246" y="44" fill="#5a6380" font-family="Syne Mono" font-size="8">0.35</text>
+            <rect x="0" y="52" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="52" width="60" height="16" fill="rgba(126,184,255,.3)" rx="2"/>
+            <text x="246" y="64" fill="#5a6380" font-family="Syne Mono" font-size="8">0.25</text>
+            <text x="120" y="90" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">error = p̂ − e_y</text>
+            <rect x="0" y="98" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="0" y="98" width="144" height="14" fill="rgba(240,98,146,.55)" rx="1"/>
+            <rect x="0" y="116" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="112" y="116" width="84" height="14" fill="rgba(240,98,146,.45)" rx="1"/>
+            <rect x="0" y="134" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="112" y="134" width="60" height="14" fill="rgba(240,98,146,.4)" rx="1"/>
+            <rect x="0" y="158" width="240" height="28" fill="rgba(245,166,35,.05)" stroke="rgba(245,166,35,.2)" stroke-width="1" rx="2"/>
+            <text x="120" y="170" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">EL2N</text>
+            <text x="120" y="182" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="14" font-weight="600">0.75</text>
+          </g>
+          <!-- Mislabeled -->
+          <g transform="translate(590,20)">
+            <text x="120" y="0" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="9">MISLABELED</text>
+            <rect x="0" y="12" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="12" width="14" height="16" fill="rgba(61,217,197,.15)" rx="2"/>
+            <text x="246" y="24" fill="#3dd9c5" font-family="Syne Mono" font-size="8">0.06←wrong</text>
+            <rect x="0" y="32" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="32" width="210" height="16" fill="rgba(240,98,146,.35)" rx="2"/>
+            <text x="246" y="44" fill="#5a6380" font-family="Syne Mono" font-size="8">0.87</text>
+            <rect x="0" y="52" width="240" height="16" fill="#12151e" rx="2"/>
+            <rect x="0" y="52" width="17" height="16" fill="rgba(126,184,255,.25)" rx="2"/>
+            <text x="246" y="64" fill="#5a6380" font-family="Syne Mono" font-size="8">0.07</text>
+            <text x="120" y="90" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">error = p̂ − e_y</text>
+            <rect x="0" y="98" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="0" y="98" width="226" height="14" fill="rgba(240,98,146,.6)" rx="1"/>
+            <rect x="0" y="116" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="112" y="116" width="210" height="14" fill="rgba(240,98,146,.5)" rx="1"/>
+            <rect x="0" y="134" width="240" height="14" fill="#12151e" rx="2"/>
+            <rect x="112" y="134" width="17" height="14" fill="rgba(240,98,146,.3)" rx="1"/>
+            <rect x="0" y="158" width="240" height="28" fill="rgba(240,98,146,.05)" stroke="rgba(240,98,146,.25)" stroke-width="1" rx="2"/>
+            <text x="120" y="170" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">EL2N</text>
+            <text x="120" y="182" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="14" font-weight="600">1.27</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- GraNd -->
+  <div class="metric grad" id="grand">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">08</span>
+      <span class="m-title">Gradient Norm</span>
+      <span class="m-abbr">GraNd</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>The L2 norm of the per-sample gradient at <strong>initialisation</strong>. Approximates how far each sample would push the model parameters if trained on alone.</p>
+          <p>Large GraNd → high-influence sample. Used for <strong>coreset selection</strong>: a small subset with high aggregate GraNd approximates full-dataset training.</p>
+          <div class="chips">
+            <span class="chip cy">Large → high influence / keep</span>
+            <span class="chip ck">Small → redundant / prune</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="ff">GraNd</span>(<span class="fv">x</span>, <span class="fv">y</span>) = <span class="fo">𝔼</span><sub>θ₀</sub> ‖ ∇<sub>θ</sub> <span class="fv">L</span>(<span class="fv">x</span>,<span class="fv">y</span>; θ₀) ‖<sub>2</sub><br><br>
+            <span class="fc">// θ₀  = initialisation weights</span><br>
+            <span class="fc">// 𝔼_θ₀ = avg over multiple inits</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">GraNd score distribution — influence histogram</div>
+        <svg class="viz" viewBox="0 0 860 180">
+          <line x1="60" y1="150" x2="840" y2="150" stroke="#1e2230" stroke-width="1"/>
+          <line x1="60" y1="10" x2="60" y2="150" stroke="#1e2230" stroke-width="1"/>
+          <rect x="68"  y="42" width="54" height="108" fill="rgba(61,217,197,.22)" rx="2"/>
+          <rect x="128" y="20" width="54" height="130" fill="rgba(61,217,197,.26)" rx="2"/>
+          <rect x="188" y="32" width="54" height="118" fill="rgba(61,217,197,.22)" rx="2"/>
+          <rect x="248" y="62" width="54" height="88" fill="rgba(61,217,197,.18)" rx="2"/>
+          <rect x="308" y="90" width="54" height="60" fill="rgba(61,217,197,.14)" rx="2"/>
+          <!-- threshold -->
+          <line x1="400" y1="10" x2="400" y2="150" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="5 3"/>
+          <text x="400" y="8" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="8">prune threshold</text>
+          <rect x="368" y="112" width="54" height="38" fill="rgba(245,166,35,.2)" rx="2"/>
+          <rect x="428" y="120" width="54" height="30" fill="rgba(245,166,35,.22)" rx="2"/>
+          <rect x="488" y="126" width="54" height="24" fill="rgba(245,166,35,.25)" rx="2"/>
+          <rect x="548" y="132" width="54" height="18" fill="rgba(245,166,35,.28)" rx="2"/>
+          <rect x="608" y="136" width="54" height="14" fill="rgba(245,166,35,.3)" rx="2"/>
+          <rect x="668" y="139" width="54" height="11" fill="rgba(245,166,35,.32)" rx="2"/>
+          <rect x="728" y="142" width="54" height="8" fill="rgba(245,166,35,.35)" rx="2"/>
+          <rect x="788" y="144" width="48" height="6" fill="rgba(245,166,35,.38)" rx="2"/>
+          <rect x="68" y="8" width="326" height="18" fill="rgba(61,217,197,.05)" rx="2"/>
+          <text x="231" y="21" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="7.5">Low GraNd — prunable</text>
+          <rect x="420" y="8" width="418" height="18" fill="rgba(245,166,35,.05)" rx="2"/>
+          <text x="629" y="21" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="7.5">High GraNd — keep (high influence)</text>
+          <g fill="#5a6380" font-family="Syne Mono" font-size="8">
+            <text x="68" y="164">0</text>
+            <text x="440" y="164" text-anchor="middle">‖∇θ L‖₂ →</text>
+            <text x="822" y="164">large</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- GradVar -->
+  <div class="metric grad" id="gradvar">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">09</span>
+      <span class="m-title">Gradient Variance</span>
+      <span class="m-abbr">GradVar</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>Measures how <strong>consistently the gradient vector points in the same direction</strong> across multiple training runs or checkpoints for a given sample.</p>
+          <p>High variance → gradient direction is chaotic → sample is in a <strong>conflicted region</strong> of the loss landscape, possibly contradicted by other training examples. Low variance → reliable, consistent update signal.</p>
+          <div class="chips">
+            <span class="chip cy">High var → noisy / conflicting</span>
+            <span class="chip ck">Low var → clean, consistent</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="ff">GradVar</span>(<span class="fv">x</span>) = <span class="fo">𝔼</span><sub>θ</sub> ‖ <span class="fv">g</span>(<span class="fv">x</span>;θ) <span class="fo">−</span> <span class="fo">𝔼</span><sub>θ</sub>[<span class="fv">g</span>] ‖<sup>2</sup><sub>2</sub><br><br>
+            <span class="fc">// g(x;θ) = ∇_θ L(x,y;θ)</span><br>
+            <span class="fc">// 𝔼_θ over multiple checkpoints</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Gradient vector spread — 2D projection across 5 runs</div>
+        <svg class="viz" viewBox="0 0 860 240">
+          <defs>
+            <marker id="arG" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,.5 L5.5,3 L0,5.5Z" fill="currentColor"/></marker>
+          </defs>
+          <!-- Low variance panel -->
+          <g transform="translate(80,20)">
+            <text x="130" y="0" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="9">LOW VARIANCE — clean example</text>
+            <line x1="130" y1="30" x2="130" y2="200" stroke="#1e2230" stroke-width="1"/>
+            <line x1="30" y1="115" x2="230" y2="115" stroke="#1e2230" stroke-width="1"/>
+            <!-- vectors all pointing upper-right -->
+            <line x1="130" y1="115" x2="188" y2="68" stroke="#3dd9c5" stroke-width="2" opacity=".9" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="192" y2="64" stroke="#3dd9c5" stroke-width="2" opacity=".7" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="186" y2="72" stroke="#3dd9c5" stroke-width="2" opacity=".75" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="190" y2="66" stroke="#3dd9c5" stroke-width="2" opacity=".6" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="185" y2="76" stroke="#3dd9c5" stroke-width="2" opacity=".5" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="189" y2="67" stroke="white" stroke-width="2.5" opacity=".9" marker-end="url(#arG)"/>
+            <circle cx="130" cy="115" r="52" fill="none" stroke="rgba(61,217,197,.12)" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="130" y="215" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">Var ≈ 0.04</text>
+          </g>
+          <!-- High variance panel -->
+          <g transform="translate(420,20)">
+            <text x="130" y="0" text-anchor="middle" fill="#f5a623" font-family="Syne Mono" font-size="9">HIGH VARIANCE — noisy example</text>
+            <line x1="130" y1="30" x2="130" y2="200" stroke="#1e2230" stroke-width="1"/>
+            <line x1="30" y1="115" x2="230" y2="115" stroke="#1e2230" stroke-width="1"/>
+            <line x1="130" y1="115" x2="210" y2="55" stroke="#f5a623" stroke-width="2" opacity=".8" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="58" y2="62" stroke="#f5a623" stroke-width="2" opacity=".7" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="170" y2="188" stroke="#f5a623" stroke-width="2" opacity=".8" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="55" y2="158" stroke="#f5a623" stroke-width="2" opacity=".65" marker-end="url(#arG)"/>
+            <line x1="130" y1="115" x2="210" y2="162" stroke="#f5a623" stroke-width="2" opacity=".75" marker-end="url(#arG)"/>
+            <!-- near-zero mean -->
+            <line x1="130" y1="115" x2="135" y2="112" stroke="white" stroke-width="2.5" opacity=".7" marker-end="url(#arG)"/>
+            <circle cx="130" cy="115" r="100" fill="none" stroke="rgba(245,166,35,.08)" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="130" y="215" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">Var ≈ 0.82 — mean ≈ 0</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /cat-metrics grad -->
+
+
+<!-- ╔════════════════════════════════════════════════════════╗
+     ║  CATEGORY 4 — REPRESENTATION-BASED                   ║
+     ╚════════════════════════════════════════════════════════╝ -->
+<div class="cat-band repr" style="margin-top:3rem">
+  <span class="cat-icon">🔬</span>
+  <div>
+    <div class="cat-name repr">Representation-Based Metrics</div>
+    <div class="cat-desc">Analyse the model's internal hidden representations — where examples live in feature space, at what depth they become classifiable, and how similar they are to their class cluster.</div>
+  </div>
+  <div class="cat-pill">Probes internal activations</div>
+</div>
+
+<div class="cat-metrics repr">
+
+  <!-- PREDICTION DEPTH -->
+  <div class="metric repr" id="prepdepth">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">10</span>
+      <span class="m-title">Prediction Depth</span>
+      <span class="m-abbr">PredDepth</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>Attach a linear probe to each hidden layer. PredDepth is the <strong>shallowest layer whose probe correctly classifies the example</strong>.</p>
+          <p>Easy examples are separable by early layers — they have simple, surface-level features. Hard examples require full network depth — their discriminative features are highly non-linear.</p>
+          <div class="chips">
+            <span class="chip ck">Low depth → easy / prototypical</span>
+            <span class="chip cp">High depth → complex / rare</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="ff">PD</span>(<span class="fv">x</span>, <span class="fv">y</span>) = <span class="ff">min</span>{ <span class="fv">l</span> : <span class="ff">argmax</span> <span class="fv">W<sub>l</sub> h<sub>l</sub></span>(<span class="fv">x</span>) = <span class="fv">y</span> }<br><br>
+            <span class="fc">// h_l(x) = activations at layer l</span><br>
+            <span class="fc">// W_l    = trained linear probe at l</span><br>
+            <span class="fc">// y      = true label</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Per-layer linear probe accuracy — easy vs hard example</div>
+        <svg class="viz" viewBox="0 0 860 200">
+          <!-- axes -->
+          <line x1="60" y1="170" x2="760" y2="170" stroke="#1e2230" stroke-width="1"/>
+          <line x1="60" y1="10" x2="60" y2="170" stroke="#1e2230" stroke-width="1"/>
+          <!-- 50% line -->
+          <line x1="60" y1="90" x2="760" y2="90" stroke="#2a3045" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="52" y="93" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="8">50%</text>
+          <text x="52" y="18" text-anchor="end" fill="#5a6380" font-family="Syne Mono" font-size="8">100%</text>
+          <!-- Easy (steep rise) -->
+          <polyline points="60,160 160,130 260,68 360,22 460,16 560,14 660,13 760,12" fill="none" stroke="#3dd9c5" stroke-width="2.5"/>
+          <!-- PD marker at layer 3 -->
+          <circle cx="260" cy="68" r="5" fill="#3dd9c5"/>
+          <line x1="260" y1="68" x2="260" y2="170" stroke="#3dd9c5" stroke-width="1" stroke-dasharray="3 2" opacity=".5"/>
+          <text x="260" y="185" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="8">PD=3 ★</text>
+          <text x="560" y="10" fill="#3dd9c5" font-family="Syne Mono" font-size="8">Easy example</text>
+          <!-- Hard (slow rise) -->
+          <polyline points="60,168 160,165 260,160 360,148 460,120 560,70 660,28 760,18" fill="none" stroke="#f06292" stroke-width="2.5"/>
+          <!-- PD marker at layer 6 -->
+          <circle cx="560" cy="70" r="5" fill="#f06292"/>
+          <line x1="560" y1="70" x2="560" y2="170" stroke="#f06292" stroke-width="1" stroke-dasharray="3 2" opacity=".5"/>
+          <text x="560" y="185" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="8">PD=6 ★</text>
+          <text x="680" y="45" fill="#f06292" font-family="Syne Mono" font-size="8">Hard example</text>
+          <!-- layer labels -->
+          <g fill="#5a6380" font-family="Syne Mono" font-size="8">
+            <text x="60" y="195">L1</text><text x="160" y="195">L2</text><text x="260" y="195">L3</text>
+            <text x="360" y="195">L4</text><text x="460" y="195">L5</text><text x="560" y="195">L6</text>
+            <text x="660" y="195">L7</text><text x="760" y="195">L8</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROTOTYPICALITY -->
+  <div class="metric repr" id="proto">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">11</span>
+      <span class="m-title">Prototypicality</span>
+      <span class="m-abbr">Proto</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>Average cosine similarity between an example's embedding and all same-class embeddings. Measures how <strong>central / representative</strong> an example is within its cluster.</p>
+          <p>High-proto examples look like the <em>canonical</em> member of their class. Low-proto are outliers — atypical, potentially mislabeled, or from a rare sub-population.</p>
+          <div class="chips">
+            <span class="chip ck">High → prototypical / representative</span>
+            <span class="chip cr">Low → outlier / mislabeled</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="ff">Proto</span>(<span class="fv">x<sub>i</sub></span>) = <span class="fo">1/|C<sub>y</sub>|</span> <span class="fo">∑</span><sub class="fv">j∈C<sub>y</sub></sub> <span class="ff">cos</span>(<span class="fv">φ</span>(<span class="fv">x<sub>i</sub></span>), <span class="fv">φ</span>(<span class="fv">x<sub>j</sub></span>))<br><br>
+            <span class="fc">// φ(x) = embedding (e.g. CLIP, MoCo)</span><br>
+            <span class="fc">// C_y  = set of examples with label y</span>
+          </div>
+        </div>
+      </div>
+      <div class="viz-block">
+        <div class="viz-label">Feature space — class clusters with prototypicality colour-coded by radius</div>
+        <svg class="viz" viewBox="0 0 860 260">
+          <defs>
+            <pattern id="pgrid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M40 0L0 0 0 40" fill="none" stroke="#111520" stroke-width=".5"/>
+            </pattern>
+          </defs>
+          <rect x="0" y="0" width="860" height="260" fill="url(#pgrid)"/>
+          <!-- Class A -->
+          <ellipse cx="260" cy="130" rx="100" ry="85" fill="rgba(61,217,197,.03)" stroke="rgba(61,217,197,.1)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <text x="260" y="232" text-anchor="middle" fill="rgba(61,217,197,.4)" font-family="Syne Mono" font-size="8">Class A</text>
+          <circle cx="260" cy="130" r="5" fill="#3dd9c5" opacity=".9"/>
+          <text x="260" y="122" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="7">centroid</text>
+          <!-- core -->
+          <circle cx="242" cy="135" r="9" fill="rgba(61,217,197,.65)" stroke="#3dd9c5" stroke-width="1.5"/>
+          <circle cx="278" cy="122" r="8" fill="rgba(61,217,197,.6)" stroke="#3dd9c5" stroke-width="1.5"/>
+          <circle cx="252" cy="152" r="7" fill="rgba(61,217,197,.55)" stroke="#3dd9c5" stroke-width="1.5"/>
+          <circle cx="295" cy="148" r="7" fill="rgba(61,217,197,.5)" stroke="#3dd9c5" stroke-width="1.5"/>
+          <!-- peripheral -->
+          <circle cx="198" cy="148" r="5.5" fill="rgba(61,217,197,.2)" stroke="rgba(61,217,197,.35)" stroke-width="1"/>
+          <circle cx="330" cy="105" r="5" fill="rgba(61,217,197,.18)" stroke="rgba(61,217,197,.3)" stroke-width="1"/>
+          <circle cx="320" cy="170" r="5" fill="rgba(61,217,197,.18)" stroke="rgba(61,217,197,.3)" stroke-width="1"/>
+          <circle cx="190" cy="175" r="4.5" fill="rgba(61,217,197,.14)" stroke="rgba(61,217,197,.25)" stroke-width="1"/>
+          <!-- outlier -->
+          <circle cx="445" cy="200" r="7" fill="rgba(240,98,146,.28)" stroke="#f06292" stroke-width="1.5"/>
+          <text x="456" y="196" fill="#f06292" font-family="Syne Mono" font-size="7.5">low proto</text>
+          <line x1="445" y1="200" x2="260" y2="130" stroke="rgba(240,98,146,.15)" stroke-width="1" stroke-dasharray="4 3"/>
+
+          <!-- Class B -->
+          <ellipse cx="620" cy="130" rx="95" ry="80" fill="rgba(155,140,255,.03)" stroke="rgba(155,140,255,.1)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <text x="620" y="225" text-anchor="middle" fill="rgba(155,140,255,.4)" font-family="Syne Mono" font-size="8">Class B</text>
+          <circle cx="620" cy="130" r="5" fill="#9b8cff" opacity=".9"/>
+          <text x="620" y="122" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="7">centroid</text>
+          <circle cx="602" cy="136" r="9" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1.5"/>
+          <circle cx="638" cy="124" r="8" fill="rgba(155,140,255,.55)" stroke="#9b8cff" stroke-width="1.5"/>
+          <circle cx="610" cy="155" r="7" fill="rgba(155,140,255,.5)" stroke="#9b8cff" stroke-width="1.5"/>
+          <circle cx="648" cy="152" r="7" fill="rgba(155,140,255,.48)" stroke="#9b8cff" stroke-width="1.5"/>
+          <circle cx="558" cy="145" r="5.5" fill="rgba(155,140,255,.18)" stroke="rgba(155,140,255,.3)" stroke-width="1"/>
+          <circle cx="680" cy="108" r="5" fill="rgba(155,140,255,.16)" stroke="rgba(155,140,255,.28)" stroke-width="1"/>
+          <circle cx="682" cy="172" r="5" fill="rgba(155,140,255,.16)" stroke="rgba(155,140,255,.28)" stroke-width="1"/>
+          <!-- legend -->
+          <g transform="translate(748,40)">
+            <rect x="0" y="0" width="100" height="105" fill="rgba(13,15,22,.9)" rx="2" stroke="#2a3045" stroke-width="1"/>
+            <text x="50" y="16" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5" letter-spacing=".1em">LEGEND</text>
+            <circle cx="16" cy="34" r="8" fill="rgba(61,217,197,.6)" stroke="#3dd9c5" stroke-width="1.5"/>
+            <text x="32" y="38" fill="#7888a8" font-family="Syne Mono" font-size="7.5">high proto</text>
+            <circle cx="16" cy="56" r="5" fill="rgba(61,217,197,.15)" stroke="rgba(61,217,197,.3)" stroke-width="1"/>
+            <text x="32" y="60" fill="#7888a8" font-family="Syne Mono" font-size="7.5">mid proto</text>
+            <circle cx="16" cy="76" r="6" fill="rgba(240,98,146,.28)" stroke="#f06292" stroke-width="1.5"/>
+            <text x="32" y="80" fill="#7888a8" font-family="Syne Mono" font-size="7.5">low proto</text>
+            <circle cx="16" cy="95" r="5" fill="#3dd9c5" opacity=".9"/>
+            <text x="32" y="99" fill="#7888a8" font-family="Syne Mono" font-size="7.5">centroid</text>
+          </g>
+          <text x="430" y="258" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">Feature Dim 1 (PCA projection) →</text>
+          <text x="14" y="130" fill="#5a6380" font-family="Syne Mono" font-size="8" transform="rotate(-90,14,130)">Feature Dim 2</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /cat-metrics repr -->
+
+
+<!-- ╔════════════════════════════════════════════════════════╗
+     ║  CATEGORY 5 — DECISION-LEVEL (Regret Framework)       ║
+     ╚════════════════════════════════════════════════════════╝ -->
+<div class="cat-band dec" style="margin-top:3rem">
+  <span class="cat-icon">⚖️</span>
+  <div>
+    <div class="cat-name dec">Decision-Level Metrics</div>
+    <div class="cat-desc">Shift focus from model-level aggregates to <em>individual predictions</em>. Instead of asking "does the model perform well on average?", ask "which specific predictions are at risk of being wrong due to label noise?" — <em>Nagaraj, Liu, Calmon, Ustun (ICLR 2025)</em></div>
+  </div>
+  <div class="cat-pill">Post-training · Instance-level</div>
+</div>
+
+<div class="cat-metrics dec">
+
+  <!-- REGRET -->
+  <div class="metric dec" id="regret">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">12</span>
+      <span class="m-title">Instance-Level Regret</span>
+      <span class="m-abbr">Regret</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>All prior metrics ask <em>"how hard is this sample to learn?"</em> Regret asks a fundamentally different question: <strong>"for a specific individual prediction, how likely is the model wrong in a way we couldn't foresee?"</strong></p>
+          <p>Because we only ever observe one realisation of label noise, a model can perform well in aggregate while individual predictions are subject to a <strong>lottery of mistakes</strong>. Regret captures the mismatch between the error the model <em>thinks</em> it is making (based on noisy labels) and the error it is <em>actually</em> making (against the true label).</p>
+          <p>Crucially, Nagaraj et al. prove that <strong>regret is unavoidable</strong> under label noise — even a perfectly-calibrated hedging algorithm incurs positive expected regret. The only escape routes are selective classification (abstaining) or relabelling.</p>
+          <div class="chips">
+            <span class="chip" style="background:rgba(251,146,60,.07);color:#fb923c;border:1px solid rgba(251,146,60,.2)">High regret → "lottery" prediction</span>
+            <span class="chip ck">Low regret → reliable prediction</span>
+            <span class="chip" style="background:rgba(251,146,60,.07);color:#fb923c;border:1px solid rgba(251,146,60,.2)">Unavoidable if noise exists</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="fhi">e_true</span>(<span class="fv">f</span>,<span class="fv">x<sub>i</sub></span>,<span class="fv">U<sub>i</sub></span>) = <span class="fo">𝟙</span>[<span class="fv">f</span>(<span class="fv">x<sub>i</sub></span>) ≠ <span class="fv">ỹ<sub>i</sub></span> <span class="fo">⊕</span> <span class="fv">U<sub>i</sub></span>]<br>
+            <span class="fhi">e_pred</span>(<span class="fv">f</span>,<span class="fv">x<sub>i</sub></span>) &nbsp;= <span class="fo">𝟙</span>[<span class="fv">f</span>(<span class="fv">x<sub>i</sub></span>) ≠ <span class="fv">ỹ<sub>i</sub></span>]<br><br>
+            <span class="ff">Regret</span>(<span class="fv">f</span>,<span class="fv">x<sub>i</sub></span>,<span class="fv">ỹ<sub>i</sub></span>,<span class="fv">U<sub>i</sub></span>) =<br>
+            &nbsp;&nbsp;<span class="fo">𝟙</span>[ <span class="fhi">e_pred</span>(<span class="fv">f</span>,<span class="fv">x<sub>i</sub></span>) ≠ <span class="fhi">e_true</span>(<span class="fv">f</span>,<span class="fv">x<sub>i</sub></span>,<span class="fv">U<sub>i</sub></span>) ]<br><br>
+            <span class="fc">// ỹ_i = observed (noisy) label</span><br>
+            <span class="fc">// U_i = noise flip: 𝟙[y_i ≠ ỹ_i]</span><br>
+            <span class="fc">// ⊕   = XOR (flip operator)</span><br>
+            <span class="fc">// 𝔼[Regret] = Pr(U=1 | X, Ỹ)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="viz-block">
+        <div class="viz-label">What regret means — 5 points, 30% noise rate. Yellow = regretful predictions.</div>
+        <svg class="viz" viewBox="0 0 900 260">
+          <defs>
+            <marker id="arD" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,.5 L5.5,3 L0,5.5Z" fill="#5a6380"/>
+            </marker>
+          </defs>
+
+          <!-- ── LEFT PANEL: Noise Draw 1 ── -->
+          <text x="200" y="20" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="9" letter-spacing="1">NOISE DRAW 1</text>
+
+          <!-- column headers -->
+          <text x="50"  y="42" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">True y</text>
+          <text x="130" y="42" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">Noisy ỹ</text>
+          <text x="210" y="42" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">f(x)</text>
+          <text x="290" y="42" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">e_pred</text>
+          <text x="370" y="42" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">e_true</text>
+          <text x="450" y="42" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="8">Regret</text>
+
+          <!-- 5 rows — Draw 1: flips on rows 1 and 4 (0-indexed) -->
+          <!-- Row 0: true=1, noisy=0 (flipped), f=0, e_pred=0, e_true=1, regret=1 -->
+          <rect x="420" y="50" width="60" height="22" fill="rgba(251,146,60,.25)" rx="1"/>
+          <text x="50"  y="66" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">1</text>
+          <text x="130" y="66" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="10">0 ✗</text>
+          <text x="210" y="66" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="10">0</text>
+          <text x="290" y="66" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="370" y="66" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="10">1</text>
+          <text x="450" y="66" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="10">⚠ 1</text>
+
+          <!-- Row 1: true=0, noisy=0, f=0, e_pred=0, e_true=0, regret=0 -->
+          <text x="50"  y="98" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="130" y="98" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="210" y="98" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="10">0</text>
+          <text x="290" y="98" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="370" y="98" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="450" y="98" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="10">0</text>
+
+          <!-- Row 2: true=0, noisy=0, f=1, e_pred=1, e_true=1, regret=0 -->
+          <text x="50"  y="130" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="130" y="130" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="210" y="130" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="10">1</text>
+          <text x="290" y="130" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="10">1</text>
+          <text x="370" y="130" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="10">1</text>
+          <text x="450" y="130" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="10">0</text>
+
+          <!-- Row 3: true=1, noisy=1, f=1, e_pred=0, e_true=0, regret=0 -->
+          <text x="50"  y="162" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">1</text>
+          <text x="130" y="162" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">1</text>
+          <text x="210" y="162" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="10">1</text>
+          <text x="290" y="162" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="370" y="162" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="450" y="162" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="10">0</text>
+
+          <!-- Row 4: true=1, noisy=0 (flipped), f=1, e_pred=1, e_true=0, regret=1 -->
+          <rect x="420" y="174" width="60" height="22" fill="rgba(251,146,60,.25)" rx="1"/>
+          <text x="50"  y="190" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">1</text>
+          <text x="130" y="190" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="10">0 ✗</text>
+          <text x="210" y="190" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="10">1</text>
+          <text x="290" y="190" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="10">1</text>
+          <text x="370" y="190" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="10">0</text>
+          <text x="450" y="190" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="10">⚠ 1</text>
+
+          <!-- summary row -->
+          <line x1="20" y1="210" x2="490" y2="210" stroke="#1e2230" stroke-width="1"/>
+          <text x="290" y="228" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">Predicted error = 2</text>
+          <text x="370" y="228" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">True error = 2</text>
+          <text x="450" y="228" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="8">Regret = 2</text>
+          <text x="200" y="248" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">Same aggregate error, but 2 individuals experience wrong outcomes</text>
+
+          <!-- ── RIGHT PANEL: Population vs Instance view ── -->
+          <text x="710" y="20" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="9" letter-spacing="1">POPULATION vs INSTANCE VIEW</text>
+
+          <!-- Population bar (good looking) -->
+          <text x="540" y="58" fill="#5a6380" font-family="Syne Mono" font-size="8">Population accuracy</text>
+          <rect x="540" y="66" width="320" height="20" fill="rgba(61,217,197,.06)" rx="2" stroke="#1e2230" stroke-width="1"/>
+          <rect x="540" y="66" width="256" height="20" fill="rgba(61,217,197,.3)" rx="2"/>
+          <text x="860" y="81" text-anchor="end" fill="#3dd9c5" font-family="Syne Mono" font-size="8">80% ✓</text>
+
+          <!-- Instance level: 2 individuals are in lottery -->
+          <text x="540" y="110" fill="#5a6380" font-family="Syne Mono" font-size="8">Individual-level certainty</text>
+          <g>
+            <!-- 3 safe individuals -->
+            <rect x="540" y="118" width="52" height="40" fill="rgba(61,217,197,.2)" rx="2" stroke="rgba(61,217,197,.3)" stroke-width="1"/>
+            <text x="566" y="144" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="9">✓</text>
+            <rect x="598" y="118" width="52" height="40" fill="rgba(61,217,197,.2)" rx="2" stroke="rgba(61,217,197,.3)" stroke-width="1"/>
+            <text x="624" y="144" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="9">✓</text>
+            <rect x="656" y="118" width="52" height="40" fill="rgba(61,217,197,.2)" rx="2" stroke="rgba(61,217,197,.3)" stroke-width="1"/>
+            <text x="682" y="144" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="9">✓</text>
+            <!-- 2 regret individuals -->
+            <rect x="714" y="118" width="52" height="40" fill="rgba(251,146,60,.2)" rx="2" stroke="rgba(251,146,60,.4)" stroke-width="1.5"/>
+            <text x="740" y="141" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="9">⚠</text>
+            <rect x="772" y="118" width="52" height="40" fill="rgba(251,146,60,.2)" rx="2" stroke="rgba(251,146,60,.4)" stroke-width="1.5"/>
+            <text x="798" y="141" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="9">⚠</text>
+          </g>
+          <text x="740" y="175" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="8">2 individuals in lottery</text>
+
+          <!-- Key insight box -->
+          <rect x="540" y="192" width="318" height="50" fill="rgba(251,146,60,.04)" rx="2" stroke="rgba(251,146,60,.15)" stroke-width="1"/>
+          <text x="699" y="210" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="8">KEY INSIGHT</text>
+          <text x="699" y="224" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="7.5">Population-level accuracy looks fine (80%).</text>
+          <text x="699" y="236" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="7.5">2 individuals get wrong outcomes they can't anticipate.</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAUSIBLE MODELS -->
+  <div class="metric dec" id="plausible">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">13</span>
+      <span class="m-title">Plausible Models &amp; Susceptibility</span>
+      <span class="m-abbr">Susceptibility</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>Since we cannot observe the true draw of label noise, we instead <strong>sample plausible draws</strong> from the posterior noise model and retrain a model on each. The <strong>susceptibility</strong> of a prediction is how often the model's output changes across these plausible retrainings.</p>
+          <p>An instance with high susceptibility is one where different equally-plausible label configurations lead to different model predictions — a strong indicator that the prediction is unreliable and should be flagged for review or abstention.</p>
+          <p>This operationalises regret into something measurable: <strong>a sensitivity score per prediction</strong> that can be computed without knowing the true labels.</p>
+          <div class="chips">
+            <span class="chip" style="background:rgba(251,146,60,.07);color:#fb923c;border:1px solid rgba(251,146,60,.2)">High susc. → flag / abstain</span>
+            <span class="chip ck">Low susc. → prediction robust to noise</span>
+            <span class="chip cp">Requires ensemble over noise draws</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formula</div>
+          <div class="formula">
+            <span class="fc">// Sample K plausible clean datasets:</span><br>
+            <span class="fv">û<sup>(k)</sup></span> ~ <span class="ff">Posterior</span>(<span class="fv">U</span> | <span class="fv">X</span>, <span class="fv">Ỹ</span>),  <span class="fv">k</span>=1…K<br>
+            <span class="fv">D̂<sup>(k)</sup></span> = { (<span class="fv">x<sub>i</sub></span>, <span class="fv">ỹ<sub>i</sub></span> ⊕ <span class="fv">û<sub>i</sub><sup>(k)</sup></span>) }<br><br>
+            <span class="fc">// Train a model on each:</span><br>
+            <span class="fv">f̂<sup>(k)</sup></span> = <span class="ff">train</span>(<span class="fv">D̂<sup>(k)</sup></span>)<br><br>
+            <span class="fc">// Susceptibility = prediction disagreement:</span><br>
+            <span class="ff">Susc</span>(<span class="fv">x<sub>i</sub></span>) = <span class="fo">1/K</span> <span class="fo">∑</span><sub>k</sub> <span class="fo">𝟙</span>[<span class="fv">f̂<sup>(k)</sup></span>(<span class="fv">x<sub>i</sub></span>) ≠ <span class="fv">f̂<sup>(1)</sup></span>(<span class="fv">x<sub>i</sub></span>)]<br><br>
+            <span class="fc">// High Susc → prediction unstable across</span><br>
+            <span class="fc">// plausible realisations of the true labels</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="viz-block">
+        <div class="viz-label">Plausible model ensemble — how susceptibility is computed across K noise draws</div>
+        <svg class="viz" viewBox="0 0 900 230">
+          <!-- Noisy dataset box -->
+          <rect x="20" y="70" width="110" height="90" fill="rgba(251,146,60,.06)" rx="3" stroke="rgba(251,146,60,.2)" stroke-width="1.5"/>
+          <text x="75" y="92" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="8" letter-spacing="1">NOISY</text>
+          <text x="75" y="104" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="8">DATASET</text>
+          <text x="75" y="120" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="7">D̃ = {(x, ỹ)}</text>
+          <text x="75" y="134" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="7">+ noise model</text>
+          <text x="75" y="148" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="7">+ posterior</text>
+
+          <!-- Arrow to sampling -->
+          <line x1="130" y1="115" x2="178" y2="115" stroke="#5a6380" stroke-width="1.5" marker-end="url(#arD)"/>
+          <text x="154" y="110" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">sample</text>
+          <text x="154" y="121" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">K draws</text>
+
+          <!-- Three plausible datasets -->
+          <g>
+            <rect x="182" y="20" width="90" height="50" fill="rgba(155,140,255,.07)" rx="2" stroke="rgba(155,140,255,.2)" stroke-width="1"/>
+            <text x="227" y="42" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="7.5">D̂⁽¹⁾</text>
+            <text x="227" y="56" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="6.5">û ~ posterior</text>
+
+            <rect x="182" y="90" width="90" height="50" fill="rgba(155,140,255,.07)" rx="2" stroke="rgba(155,140,255,.2)" stroke-width="1"/>
+            <text x="227" y="112" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="7.5">D̂⁽²⁾</text>
+            <text x="227" y="126" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="6.5">û ~ posterior</text>
+
+            <rect x="182" y="160" width="90" height="50" fill="rgba(155,140,255,.07)" rx="2" stroke="rgba(155,140,255,.2)" stroke-width="1"/>
+            <text x="227" y="182" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="7.5">D̂⁽ᴷ⁾</text>
+            <text x="227" y="196" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="6.5">û ~ posterior</text>
+          </g>
+
+          <!-- Arrows to models -->
+          <line x1="272" y1="45"  x2="318" y2="45"  stroke="#5a6380" stroke-width="1" marker-end="url(#arD)"/>
+          <line x1="272" y1="115" x2="318" y2="115" stroke="#5a6380" stroke-width="1" marker-end="url(#arD)"/>
+          <line x1="272" y1="185" x2="318" y2="185" stroke="#5a6380" stroke-width="1" marker-end="url(#arD)"/>
+          <text x="250" y="75" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">train</text>
+          <text x="250" y="148" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">train</text>
+
+          <!-- Three trained models -->
+          <rect x="322" y="20"  width="80" height="50" fill="rgba(61,217,197,.06)"  rx="2" stroke="rgba(61,217,197,.2)"  stroke-width="1"/>
+          <text x="362" y="49"  text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="8">f̂⁽¹⁾</text>
+          <rect x="322" y="90"  width="80" height="50" fill="rgba(61,217,197,.06)"  rx="2" stroke="rgba(61,217,197,.2)"  stroke-width="1"/>
+          <text x="362" y="119" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="8">f̂⁽²⁾</text>
+          <rect x="322" y="160" width="80" height="50" fill="rgba(61,217,197,.06)"  rx="2" stroke="rgba(61,217,197,.2)"  stroke-width="1"/>
+          <text x="362" y="189" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="8">f̂⁽ᴷ⁾</text>
+
+          <!-- Arrows to predictions -->
+          <line x1="402" y1="45"  x2="448" y2="45"  stroke="#5a6380" stroke-width="1" marker-end="url(#arD)"/>
+          <line x1="402" y1="115" x2="448" y2="115" stroke="#5a6380" stroke-width="1" marker-end="url(#arD)"/>
+          <line x1="402" y1="185" x2="448" y2="185" stroke="#5a6380" stroke-width="1" marker-end="url(#arD)"/>
+          <text x="425" y="78" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">predict</text>
+          <text x="425" y="152" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7">predict</text>
+
+          <!-- Predictions: one instance x_i -->
+          <text x="510" y="15" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">f̂⁽ᵏ⁾(xᵢ)</text>
+          <rect x="452" y="20"  width="116" height="50" fill="rgba(61,217,197,.1)"  rx="2" stroke="rgba(61,217,197,.25)" stroke-width="1"/>
+          <text x="510" y="49"  text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="11">class A</text>
+          <rect x="452" y="90"  width="116" height="50" fill="rgba(61,217,197,.1)"  rx="2" stroke="rgba(61,217,197,.25)" stroke-width="1"/>
+          <text x="510" y="119" text-anchor="middle" fill="#3dd9c5" font-family="Syne Mono" font-size="11">class A</text>
+          <rect x="452" y="160" width="116" height="50" fill="rgba(251,146,60,.12)"  rx="2" stroke="rgba(251,146,60,.35)" stroke-width="1.5"/>
+          <text x="510" y="189" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="11">class B ⚠</text>
+
+          <!-- Arrow to susceptibility score -->
+          <line x1="568" y1="115" x2="614" y2="115" stroke="#5a6380" stroke-width="1.5" marker-end="url(#arD)"/>
+
+          <!-- Susceptibility box -->
+          <rect x="618" y="70" width="250" height="90" fill="rgba(251,146,60,.05)" rx="3" stroke="rgba(251,146,60,.2)" stroke-width="1.5"/>
+          <text x="743" y="94" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="8" letter-spacing="1">SUSCEPTIBILITY</text>
+          <text x="743" y="110" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="8">K=3 draws</text>
+          <text x="743" y="126" text-anchor="middle" fill="#7888a8" font-family="Syne Mono" font-size="8">1 disagrees (class B)</text>
+          <text x="743" y="146" text-anchor="middle" fill="#fb923c" font-family="Syne Mono" font-size="14" font-weight="600">Susc = 1/3 ≈ 0.33</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /cat-metrics dec -->
+
+
+<!-- ╔════════════════════════════════════════════════════════════╗
+     ║  CATEGORY 6 — CONSTRUCTIVE NOISE (LNR, ICML 2025)        ║
+     ╚════════════════════════════════════════════════════════════╝ -->
+<div class="cat-band cons" style="margin-top:3rem">
+  <span class="cat-icon">⚗️</span>
+  <div>
+    <div class="cat-name cons">Constructive Noise</div>
+    <div class="cat-desc">A fundamental inversion of perspective: rather than <em>detecting</em> and removing label noise, these methods show that <strong>deliberately injecting</strong> carefully chosen label noise can correct biased decision boundaries and improve minority-class performance. — <em>Hu, Liu, Gong, Wang, Peng (ICML 2025)</em></div>
+  </div>
+  <div class="cat-pill">Pre-training intervention</div>
+</div>
+
+<div class="cat-metrics cons">
+
+  <!-- IR BOUNDARY BIAS -->
+  <div class="metric cons" id="ir-bias">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">14</span>
+      <span class="m-title">Imbalance Ratio Boundary Bias</span>
+      <span class="m-abbr">IR-Bias</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>In imbalanced binary classification, the optimal Bayesian decision boundary for <em>accuracy</em> is not neutral — it <strong>intrudes into the minority class region</strong> by an amount proportional to the imbalance ratio IR = π₀/π₁. The classifier maximises overall accuracy by simply predicting the majority class more aggressively, at the expense of minority recall.</p>
+          <p>This is not a modelling failure — it is mathematically optimal for accuracy. The problem is that accuracy is the wrong metric when the minority class is what matters (e.g. fraud, rare disease). Metrics like <strong>F1 score, G-mean, and AUC</strong> have a different optimal boundary that is shifted back towards the class midpoint.</p>
+          <div class="chips">
+            <span class="chip" style="background:rgba(52,211,153,.07);color:#34d399;border:1px solid rgba(52,211,153,.2)">High IR → severe boundary shift</span>
+            <span class="chip" style="background:rgba(240,98,146,.07);color:#f06292;border:1px solid rgba(240,98,146,.2)">Minority recall → 0 as IR → ∞</span>
+            <span class="chip cy">F1-optimal ≠ Accuracy-optimal</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">Formal boundary shift (Gaussian case)</div>
+          <div class="formula">
+            <span class="fc">// Accuracy-optimal boundary:</span><br>
+            <span class="fhi">S</span> = { <span class="fv">x</span> : <span class="fv">ωᵀx</span> + <span class="fv">β</span> = <span class="ff">ln</span>(<span class="fv">π₀</span>/<span class="fv">π₁</span>) }<br><br>
+            <span class="fc">// Shift from class midpoint:</span><br>
+            <span class="fo">δ</span> = <span class="fo">σ²</span>/(<span class="fv">μ₁</span>−<span class="fv">μ₀</span>) · <span class="ff">ln</span>(<span class="fv">π₀</span>/<span class="fv">π₁</span>)<br><br>
+            <span class="fc">// F1-optimal boundary:</span><br>
+            <span class="fhi">S<sup>F1</sup></span> = { <span class="fv">x</span> : <span class="fv">P₁</span>(<span class="fv">x</span>)/<span class="fv">P₀</span>(<span class="fv">x</span>) = <span class="ff">F1</span>(<span class="fv">x</span>)/(2−<span class="ff">F1</span>(<span class="fv">x</span>)) · <span class="fv">π₀</span>/<span class="fv">π₁</span> }<br><br>
+            <span class="fc">// δ → ∞ as IR → ∞ (minority recall → 0)</span><br>
+            <span class="fc">// δ ∝ class overlap σ²/(μ₁−μ₀)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="viz-block">
+        <div class="viz-label">Decision boundary shift — balanced vs imbalanced data (1D Gaussian example)</div>
+        <svg class="viz" viewBox="0 0 900 260">
+          <defs>
+            <linearGradient id="gA" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="rgba(155,140,255,0)"/>
+              <stop offset="100%" stop-color="rgba(155,140,255,.35)"/>
+            </linearGradient>
+            <linearGradient id="gB" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="rgba(52,211,153,.35)"/>
+              <stop offset="100%" stop-color="rgba(52,211,153,0)"/>
+            </linearGradient>
+          </defs>
+
+          <!-- ── TOP PANEL: Balanced (IR=1) ── -->
+          <text x="450" y="18" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8.5" letter-spacing="1">BALANCED  (IR = 1)   — boundary at midpoint</text>
+
+          <!-- Majority class P0 gaussian -->
+          <path d="M60,110 C100,108 160,90 220,60 C260,40 290,30 320,110 C340,158 360,110 400,110" fill="rgba(52,211,153,.12)" stroke="#34d399" stroke-width="1.5"/>
+          <!-- Minority class P1 gaussian -->
+          <path d="M500,110 C540,108 580,85 620,55 C650,35 675,28 700,110 C720,158 740,110 780,110" fill="rgba(155,140,255,.12)" stroke="#9b8cff" stroke-width="1.5"/>
+
+          <!-- Midpoint balanced boundary -->
+          <line x1="450" y1="20" x2="450" y2="112" stroke="#34d399" stroke-width="2" stroke-dasharray="6 3"/>
+          <text x="453" y="30" fill="#34d399" font-family="Syne Mono" font-size="8">S (midpoint)</text>
+
+          <!-- Labels -->
+          <text x="230" y="125" text-anchor="middle" fill="#34d399" font-family="Syne Mono" font-size="8">Majority P₀  (π₀=0.5)</text>
+          <text x="660" y="125" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="8">Minority P₁  (π₁=0.5)</text>
+
+          <!-- x axis -->
+          <line x1="50" y1="112" x2="860" y2="112" stroke="#1e2230" stroke-width="1"/>
+
+          <!-- ── BOTTOM PANEL: Imbalanced (IR=9) ── -->
+          <text x="450" y="148" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8.5" letter-spacing="1">IMBALANCED  (IR = 9)  — boundary intrudes into minority region</text>
+
+          <!-- Majority class — tall wide bell -->
+          <path d="M50,250 C80,248 130,235 200,200 C260,170 310,148 370,170 C420,186 450,250 500,250" fill="rgba(52,211,153,.15)" stroke="#34d399" stroke-width="1.5"/>
+          <!-- Minority class — small bump, same position but tiny -->
+          <path d="M580,250 C610,248 640,238 660,225 C675,215 685,210 695,250" fill="rgba(155,140,255,.15)" stroke="#9b8cff" stroke-width="1.5"/>
+
+          <!-- True midpoint -->
+          <line x1="580" y1="148" x2="580" y2="252" stroke="rgba(52,211,153,.3)" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="584" y="162" fill="rgba(52,211,153,.6)" font-family="Syne Mono" font-size="7.5">midpoint</text>
+
+          <!-- Biased accuracy-optimal boundary — shifted right INTO minority -->
+          <line x1="660" y1="148" x2="660" y2="252" stroke="#f06292" stroke-width="2.5"/>
+          <text x="664" y="162" fill="#f06292" font-family="Syne Mono" font-size="8">S  (accuracy)</text>
+          <!-- Arrow showing shift -->
+          <path d="M582,178 L656,178" stroke="#f06292" stroke-width="1.5" marker-end="url(#arrT)"/>
+          <text x="619" y="173" text-anchor="middle" fill="#f06292" font-family="Syne Mono" font-size="7.5">δ = boundary shift</text>
+
+          <!-- F1 optimal boundary — closer to midpoint -->
+          <line x1="608" y1="148" x2="608" y2="252" stroke="#f5a623" stroke-width="2" stroke-dasharray="5 3"/>
+          <text x="612" y="175" fill="#f5a623" font-family="Syne Mono" font-size="7.5">S^F1</text>
+
+          <!-- x axis -->
+          <line x1="50" y1="252" x2="860" y2="252" stroke="#1e2230" stroke-width="1"/>
+          <text x="260" y="248" text-anchor="middle" fill="#34d399" font-family="Syne Mono" font-size="8">Majority P₀  (π₀=0.9)</text>
+          <text x="660" y="245" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="8">P₁ (π₁=0.1)</text>
+
+          <!-- Minority region shaded -->
+          <rect x="660" y="148" width="190" height="104" fill="rgba(240,98,146,.04)"/>
+          <text x="755" y="210" text-anchor="middle" fill="rgba(240,98,146,.5)" font-family="Syne Mono" font-size="7.5">minority</text>
+          <text x="755" y="222" text-anchor="middle" fill="rgba(240,98,146,.5)" font-family="Syne Mono" font-size="7.5">region</text>
+          <text x="755" y="234" text-anchor="middle" fill="rgba(240,98,146,.4)" font-family="Syne Mono" font-size="7">→ misclassified!</text>
+        </svg>
+        <div class="leg">
+          <div class="ll"><div class="lline" style="background:#34d399"></div>Majority class P₀</div>
+          <div class="ll"><div class="lline" style="background:#9b8cff"></div>Minority class P₁</div>
+          <div class="ll"><div class="lline" style="background:#f06292"></div>Accuracy-optimal boundary S</div>
+          <div class="ll"><div class="lline" style="background:#f5a623;opacity:.7"></div>F1-optimal boundary S^F1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LNR -->
+  <div class="metric cons" id="lnr">
+    <div class="metric-head" onclick="toggle(this)">
+      <span class="m-num">15</span>
+      <span class="m-title">Label-Noise-based Rebalancing</span>
+      <span class="m-abbr">LNR</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="metric-body">
+      <div class="body-inner">
+        <div>
+          <div class="pane-label">Intuition</div>
+          <p>LNR deliberately flips labels of selected <strong>majority-class samples near the decision boundary</strong> to minority class labels. These near-boundary samples already have feature distributions similar to the minority class — they are the majority samples most likely to be mistaken for minority anyway.</p>
+          <p>By relabelling them, LNR <strong>realigns the effective prior probabilities</strong> seen by the classifier, shifting the decision boundary back towards the F1/G-mean-optimal position without generating synthetic samples, without a balanced auxiliary dataset, and without modifying the classifier itself.</p>
+          <p>Crucially, the injected noise is <strong>asymmetric</strong>: only majority→minority flips are made (never the reverse), and only for the most boundary-proximal samples — making the noise maximally beneficial and minimally harmful.</p>
+          <div class="chips">
+            <span class="chip" style="background:rgba(52,211,153,.07);color:#34d399;border:1px solid rgba(52,211,153,.2)">Asymmetric: majority→minority only</span>
+            <span class="chip" style="background:rgba(52,211,153,.07);color:#34d399;border:1px solid rgba(52,211,153,.2)">Model-agnostic / plug-in</span>
+            <span class="chip cy">Near-boundary samples are best candidates</span>
+            <span class="chip cp">No synthetic generation needed</span>
+          </div>
+        </div>
+        <div>
+          <div class="pane-label">LNR Noise Model</div>
+          <div class="formula">
+            <span class="fc">// Asymmetric noise matrix T:</span><br>
+            <span class="fv">T</span> = [ [<span class="fo">1−ε₀</span>,  <span class="fo">ε₀</span>],<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;[  <span class="fo">0</span>,    <span class="fo">1</span> ] ]<br><br>
+            <span class="fc">// ε₀ = flip rate for majority class</span><br>
+            <span class="fc">// Minority never flipped (row 2 = [0,1])</span><br><br>
+            <span class="fc">// Optimal flip rate (binary case):</span><br>
+            <span class="fhi">ε₀*</span> = 1 − (<span class="fv">π₁</span>/<span class="fv">π₀</span>) · <span class="ff">exp</span>(<span class="fv">Δ</span>)<br><br>
+            <span class="fc">// Δ = correction to align with F1/G-mean boundary</span><br>
+            <span class="fc">// After LNR: effective class ratio → balanced</span><br>
+            <span class="fc">// Decision boundary shifts to S^F1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="viz-block">
+        <div class="viz-label">LNR in action — which samples get flipped, and the boundary effect</div>
+        <svg class="viz" viewBox="0 0 900 260">
+          <!-- Left: before LNR -->
+          <text x="200" y="18" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8.5" letter-spacing="1">BEFORE LNR</text>
+
+          <!-- Majority dots -->
+          <g>
+            <circle cx="60"  cy="140" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="80"  cy="120" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="100" cy="150" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="75"  cy="165" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="115" cy="130" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="130" cy="155" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="90"  cy="100" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="55"  cy="180" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="145" cy="120" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="155" cy="145" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <!-- Near-boundary majority samples — highlighted with ring -->
+            <circle cx="195" cy="115" r="6" fill="rgba(52,211,153,.3)"  stroke="#34d399" stroke-width="2"/>
+            <circle cx="210" cy="135" r="6" fill="rgba(52,211,153,.3)"  stroke="#34d399" stroke-width="2"/>
+            <circle cx="200" cy="155" r="6" fill="rgba(52,211,153,.3)"  stroke="#34d399" stroke-width="2"/>
+            <circle cx="185" cy="145" r="6" fill="rgba(52,211,153,.3)"  stroke="#34d399" stroke-width="2"/>
+            <text x="198" y="85" text-anchor="middle" fill="#34d399" font-family="Syne Mono" font-size="7.5">near-boundary</text>
+            <text x="198" y="97" text-anchor="middle" fill="#34d399" font-family="Syne Mono" font-size="7.5">candidates →</text>
+          </g>
+          <!-- Minority dots -->
+          <g>
+            <circle cx="300" cy="135" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+            <circle cx="315" cy="115" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+            <circle cx="330" cy="148" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+            <circle cx="310" cy="158" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+          </g>
+          <!-- Biased boundary (before) -->
+          <line x1="240" y1="30" x2="240" y2="230" stroke="#f06292" stroke-width="2.5"/>
+          <text x="243" y="45" fill="#f06292" font-family="Syne Mono" font-size="8">S (biased)</text>
+          <!-- axis -->
+          <line x1="40" y1="230" x2="380" y2="230" stroke="#1e2230" stroke-width="1"/>
+          <!-- legend labels -->
+          <text x="115" y="220" text-anchor="middle" fill="#34d399" font-family="Syne Mono" font-size="8">Majority (many)</text>
+          <text x="315" y="220" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="8">Minority (few)</text>
+
+          <!-- Arrow in the middle -->
+          <text x="450" y="128" text-anchor="middle" fill="#34d399" font-family="Syne Mono" font-size="22">→</text>
+          <text x="450" y="148" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8">apply LNR</text>
+          <text x="450" y="160" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">flip 4 near-boundary</text>
+          <text x="450" y="172" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="7.5">majority→minority</text>
+
+          <!-- Right: after LNR -->
+          <text x="700" y="18" text-anchor="middle" fill="#5a6380" font-family="Syne Mono" font-size="8.5" letter-spacing="1">AFTER LNR</text>
+
+          <!-- Majority (fewer, same positions minus 4) -->
+          <g>
+            <circle cx="560" cy="140" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="580" cy="120" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="600" cy="150" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="575" cy="165" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="615" cy="130" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="630" cy="155" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="590" cy="100" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="555" cy="180" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="645" cy="120" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+            <circle cx="655" cy="145" r="5" fill="rgba(52,211,153,.6)"  stroke="#34d399" stroke-width="1"/>
+          </g>
+          <!-- Flipped samples now shown as minority (crosses → minority colour) -->
+          <g>
+            <!-- original minority -->
+            <circle cx="800" cy="135" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+            <circle cx="815" cy="115" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+            <circle cx="830" cy="148" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+            <circle cx="810" cy="158" r="5" fill="rgba(155,140,255,.6)" stroke="#9b8cff" stroke-width="1"/>
+            <!-- newly flipped ones — shown with star shape via text + circle -->
+            <circle cx="695" cy="115" r="7" fill="rgba(155,140,255,.35)" stroke="#9b8cff" stroke-width="2" stroke-dasharray="3 2"/>
+            <text x="695" y="119" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="9">★</text>
+            <circle cx="710" cy="135" r="7" fill="rgba(155,140,255,.35)" stroke="#9b8cff" stroke-width="2" stroke-dasharray="3 2"/>
+            <text x="710" y="139" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="9">★</text>
+            <circle cx="700" cy="155" r="7" fill="rgba(155,140,255,.35)" stroke="#9b8cff" stroke-width="2" stroke-dasharray="3 2"/>
+            <text x="700" y="159" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="9">★</text>
+            <circle cx="685" cy="145" r="7" fill="rgba(155,140,255,.35)" stroke="#9b8cff" stroke-width="2" stroke-dasharray="3 2"/>
+            <text x="685" y="149" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="9">★</text>
+            <text x="700" y="88" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="7.5">★ flipped labels</text>
+          </g>
+          <!-- Corrected boundary (after) — shifted left -->
+          <line x1="748" y1="30" x2="748" y2="230" stroke="#34d399" stroke-width="2.5"/>
+          <text x="752" y="45" fill="#34d399" font-family="Syne Mono" font-size="8">S^F1 (corrected)</text>
+          <!-- axis -->
+          <line x1="540" y1="230" x2="880" y2="230" stroke="#1e2230" stroke-width="1"/>
+          <text x="610" y="220" text-anchor="middle" fill="#34d399" font-family="Syne Mono" font-size="8">Majority</text>
+          <text x="755" y="220" text-anchor="middle" fill="#9b8cff" font-family="Syne Mono" font-size="8">Minority + ★ flipped</text>
+        </svg>
+        <div class="leg">
+          <div class="ll"><div class="ldot" style="background:rgba(52,211,153,.6)"></div>Majority class (unchanged)</div>
+          <div class="ll"><div class="ldot" style="background:rgba(155,140,255,.6)"></div>Original minority class</div>
+          <div class="ll"><div class="ldot" style="background:rgba(155,140,255,.35);border:1.5px solid #9b8cff;box-sizing:border-box"></div>Flipped majority→minority by LNR ★</div>
+          <div class="ll"><div class="lline" style="background:#f06292"></div>Biased boundary (before)</div>
+          <div class="ll"><div class="lline" style="background:#34d399"></div>Corrected boundary (after LNR)</div>
+        </div>
+      </div>
+
+      <!-- Philosophical contrast box -->
+      <div style="margin:0 1.8rem 2rem;padding:1.2rem 1.6rem;background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.15);border-radius:3px;">
+        <div class="pane-label">The philosophical inversion</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;">
+          <div>
+            <p style="font-size:.82rem;margin-bottom:.4rem"><strong style="color:#f06292">Prior view (detection):</strong></p>
+            <p style="font-size:.82rem">Label noise corrupts the training signal. AUM, SSFT, Forgetting Events, MCT, and Regret are all tools for <em>finding and removing</em> noise to expose the clean underlying signal.</p>
+          </div>
+          <div>
+            <p style="font-size:.82rem;margin-bottom:.4rem"><strong style="color:#34d399">LNR view (intervention):</strong></p>
+            <p style="font-size:.82rem">Label noise is a lever for reshaping the decision boundary. In imbalanced settings, the "clean" boundary is already wrong for the metric you care about. Targeted noise <em>corrects</em> the geometry — noise as surgery, not contamination.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /cat-metrics cons -->
+
+
+<!-- ╔════════════════════════════════════════════════════════════╗
+     ║  SUMMARY TABLE                                            ║
+     ╚════════════════════════════════════════════════════════════╝ -->
+<div class="summary-wrap" id="summary">
+  <div class="summary-head">Summary Comparison — all 15 metrics</div>
+  <div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Metric</th><th>Category</th><th>When computed</th>
+        <th>What it measures</th><th>High score</th><th>Low score</th><th>AUC noise detect</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="td-metric" style="color:#3dd9c5">AUM</td><td>Area Under Margin</td><td><span class="td-cat" style="background:rgba(61,217,197,.08);color:#3dd9c5">Trajectory</span></td><td>All epochs</td><td>Avg logit margin true vs runner-up</td><td style="color:#3dd9c5">Clean / easy</td><td style="color:#f06292">Mislabeled</td><td>~0.90</td></tr>
+      <tr><td class="td-metric" style="color:#3dd9c5">MCT</td><td>Margin Crossover Taxonomy</td><td><span class="td-cat" style="background:rgba(61,217,197,.08);color:#3dd9c5">Trajectory</span></td><td>All epochs</td><td>Epoch margin crosses zero</td><td style="color:#3dd9c5">Mild/early</td><td style="color:#f06292">Never → noisy</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#3dd9c5">FE</td><td>Forgetting Events</td><td><span class="td-cat" style="background:rgba(61,217,197,.08);color:#3dd9c5">Trajectory</span></td><td>All epochs</td><td>Count correct→incorrect flips</td><td style="color:#f06292">Boundary sample</td><td style="color:#3dd9c5">Unforgettable/prune</td><td>~0.58</td></tr>
+      <tr><td class="td-metric" style="color:#3dd9c5">FSLT</td><td>First-Split Learning Time</td><td><span class="td-cat" style="background:rgba(61,217,197,.08);color:#3dd9c5">Trajectory</span></td><td>All epochs</td><td>First epoch stably correct</td><td style="color:#f06292">Rare / complex</td><td style="color:#3dd9c5">Typical / easy</td><td>~0.74–0.97</td></tr>
+      <tr><td class="td-metric" style="color:#9b8cff">SSFT</td><td>Second-Split Forgetting Time</td><td><span class="td-cat" style="background:rgba(155,140,255,.08);color:#9b8cff">Split-Based</span></td><td>2-phase training</td><td>First epoch forgotten in phase 2</td><td style="color:#f06292">Rare (slow forget)</td><td style="color:#f06292">Mislabeled (fast forget)</td><td>~0.87–0.99 ★</td></tr>
+      <tr><td class="td-metric" style="color:#9b8cff">accf / Joint</td><td>Cumul. Forgetting Acc + Joint</td><td><span class="td-cat" style="background:rgba(155,140,255,.08);color:#9b8cff">Split-Based</span></td><td>2-phase training</td><td>Cumul. accuracy on phase-2 + rank combo</td><td style="color:#9b8cff">Typical (high)</td><td style="color:#f06292">Mislabeled (low)</td><td>~0.94–0.998 ★★</td></tr>
+      <tr><td class="td-metric" style="color:#f5a623">EL2N</td><td>Error L2 Norm</td><td><span class="td-cat" style="background:rgba(245,166,35,.08);color:#f5a623">Gradient</span></td><td>Early epochs</td><td>‖p̂ − e_y‖₂ error vector size</td><td style="color:#f06292">Hard / keep</td><td style="color:#3dd9c5">Redundant / prune</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#f5a623">GraNd</td><td>Gradient Norm</td><td><span class="td-cat" style="background:rgba(245,166,35,.08);color:#f5a623">Gradient</span></td><td>Initialisation</td><td>‖∇θ L‖₂ per-sample influence</td><td style="color:#f5a623">High influence</td><td style="color:#3dd9c5">Redundant</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#f5a623">GradVar</td><td>Gradient Variance</td><td><span class="td-cat" style="background:rgba(245,166,35,.08);color:#f5a623">Gradient</span></td><td>Multi-run</td><td>Directional variance of ∇θ L</td><td style="color:#f5a623">Noisy / conflict</td><td style="color:#3dd9c5">Consistent signal</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#f06292">PredDepth</td><td>Prediction Depth</td><td><span class="td-cat" style="background:rgba(240,98,146,.08);color:#f06292">Repr.</span></td><td>Fixed checkpoint</td><td>Shallowest probe layer correct</td><td style="color:#9b8cff">Complex</td><td style="color:#3dd9c5">Easy / shallow</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#f06292">Proto</td><td>Prototypicality</td><td><span class="td-cat" style="background:rgba(240,98,146,.08);color:#f06292">Repr.</span></td><td>Pre-training</td><td>Cosine sim to class centroid</td><td style="color:#3dd9c5">Core representative</td><td style="color:#f06292">Outlier / mislabeled</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#fb923c">Regret</td><td>Instance-Level Regret</td><td><span class="td-cat" style="background:rgba(251,146,60,.08);color:#fb923c">Decision</span></td><td>Post-training</td><td>Mismatch between anticipated &amp; actual mistake</td><td style="color:#fb923c">Lottery prediction</td><td style="color:#3dd9c5">Reliable prediction</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#fb923c">Susc</td><td>Plausible Models / Susceptibility</td><td><span class="td-cat" style="background:rgba(251,146,60,.08);color:#fb923c">Decision</span></td><td>Post-training</td><td>Prediction instability across noise draw ensemble</td><td style="color:#fb923c">Flag / abstain</td><td style="color:#3dd9c5">Robust to noise</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#34d399">IR-Bias</td><td>Imbalance Ratio Boundary Bias</td><td><span class="td-cat" style="background:rgba(52,211,153,.08);color:#34d399">Constructive</span></td><td>Analysis / theory</td><td>Shift of accuracy-optimal boundary from class midpoint</td><td style="color:#f06292">High IR → severe bias</td><td style="color:#34d399">Balanced → no bias</td><td>—</td></tr>
+      <tr><td class="td-metric" style="color:#34d399">LNR</td><td>Label-Noise-based Rebalancing</td><td><span class="td-cat" style="background:rgba(52,211,153,.08);color:#34d399">Constructive</span></td><td>Pre-training</td><td>Selective majority→minority label flips near boundary</td><td style="color:#34d399">Corrected F1 boundary</td><td style="color:#f06292">Wrong ε₀ → harms minority</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+</main>
+
+<footer style="border-top:1px solid #1e2230;padding:2.5rem 1.5rem;text-align:center;margin-top:4rem;">
+  <p style="font-family:'Syne Mono',monospace;font-size:.65rem;color:#5a6380;letter-spacing:.15em;">
+    TRAINING DYNAMICS COMPENDIUM &nbsp;·&nbsp; PAPERS: DATASET CARTOGRAPHY · EL2N / GraNd · AUM · FORGETTING EVENTS · SECOND-SPLIT FORGETTING TIME (NeurIPS 2022) · REGRETFUL DECISIONS (ICLR 2025) · BENEFICIAL LABEL NOISE / LNR (ICML 2025)
+  </p>
+</footer>
+
+<script>
+  function toggle(head) {
+    const m = head.closest('.metric');
+    m.classList.toggle('open');
+  }
+
+  // Intersection Observer for fade-in
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.metric').forEach(el => obs.observe(el));
+
+  // Auto-open first metric in each category
+  document.querySelectorAll('.cat-metrics').forEach(cat => {
+    const first = cat.querySelector('.metric');
+    if (first) first.classList.add('open');
+  });
+</script>
+</body>
+</html>

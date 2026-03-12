@@ -1,0 +1,20 @@
+{
+    "train_path" : "some path",
+    "test_path" : "some path",
+    "feature_path" : "some path",
+    "batch_size" : 512,
+    "output_dim":2,
+    "target": "approved_dll_fraud_sw_latest",
+    "hidden_layers" : [512, 128, 64, 4],
+    "epochs" : 50,
+    "model_name": "fraudmodel_5layer",
+    "optimizer": {"name": "Adam", "lr": 1e-4, "weight_decay": 1e-5},
+    "rank_weight": 1.0,
+    "rank_weight_f": 0.0,
+    "training_method": "confidence_aware",
+    "loss_function": "FocalLoss",
+    "focal_loss_config": {"gamma": 2.0, "alpha": null},
+    "use_class_weights": true,
+    "health_metrics" : ["aum", "etc", "etc", "etc"],
+    "exp_name" : "test_di_nn_repo_CAL_with_FL"
+}

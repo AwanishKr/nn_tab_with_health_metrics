@@ -1,0 +1,487 @@
+import os
+import math
+import pickle as pkl
+import torch
+import torch.nn.functional as F
+import numpy as np
+import pandas as pd
+
+from copy import deepcopy
+from collections import defaultdict
+from sklearn.neighbors import NearestNeighbors
+
+
+
+def add_logits_to_aum_dict(model, loader, device, aum_dict_template):
+    """
+    Collect logits + targets for all samples at the current checkpoint/epoch.
+    Appends new logits/targets instead of overwriting.
+
+    Args:
+        model: Trained torch model
+        loader: PyTorch DataLoader returning (x, y, ..., sample_id)
+        device: torch.device
+        aum_dict_template: dict with sample_ids as keys (initialized with count/margin/aum etc.)
+        batch_size: size of each batch
+    """
+    model.eval()
+    aum_dict_epoch = deepcopy(aum_dict_template)  # copy existing dict
+
+    with torch.no_grad():
+        for inputs, targets, _, sample_ids in loader:
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            logits = model(inputs)  # [B, num_classes]
+            
+            logits_list = logits.detach().cpu().tolist()
+            targets_list = targets.detach().cpu().tolist()
+            
+            # Convert sample_ids to list if it's a tensor
+            if isinstance(sample_ids, torch.Tensor):
+                sample_ids = sample_ids.tolist()
+
+            for sample_id, logit_vec, target in zip(sample_ids, logits_list, targets_list):
+                if "logits" not in aum_dict_epoch[sample_id]:
+                    aum_dict_epoch[sample_id]["logits"] = []
+                if "targets" not in aum_dict_epoch[sample_id]:
+                    aum_dict_epoch[sample_id]["targets"] = []
+
+                # append new values for this checkpoint
+                aum_dict_epoch[sample_id]["logits"] = logit_vec
+                aum_dict_epoch[sample_id]["targets"] = target
+
+    return aum_dict_epoch
+
+
+
+def calculate_aum(logits, targets, sample_ids, aum_dict, epoch):
+    target_values = logits.gather(1, targets.view(-1, 1)).squeeze()
+
+    # mask out target values
+    masked_logits = torch.scatter(logits, 1, targets.view(-1, 1), float('-inf'))
+    other_logit_values, _ = masked_logits.max(1)
+    other_logit_values = other_logit_values.squeeze()
+    margin_values = (target_values - other_logit_values).tolist()
+
+    for sample_id, margin in zip(sample_ids, margin_values):
+        if sample_id not in aum_dict:
+            aum_dict[sample_id] = {
+                "epoch": epoch,
+                "margin_sum": margin,
+                "aum": margin
+            }
+        if "epoch" not in aum_dict[sample_id]:  # first time seeing this sample
+            aum_dict[sample_id] = {
+                "epoch": epoch,
+                "margin_sum": margin,
+                "aum": margin
+            }
+        else:
+            aum_dict[sample_id]["epoch"] = epoch
+            aum_dict[sample_id]["margin_sum"] += margin
+            aum_dict[sample_id]["aum"] = (
+                aum_dict[sample_id]["margin_sum"] / aum_dict[sample_id]["epoch"]
+            )
+
+    return aum_dict
+
+
+import torch
+from collections import defaultdict
+
+
+def compute_grand_score(model, X_batch, y_batch, criterion, grand_scores, sample_ids):
+    """
+    GRAND computation:
+    - uses per-sample loss (criterion with reduction='none')
+    - computes gradients with torch.autograd.grad
+    - maintains {id: [count, sum, mean]} dict
+    """
+    model.eval()  # disable dropout/bn randomness
+
+    X_batch, y_batch = X_batch.to(next(model.parameters()).device), y_batch.to(next(model.parameters()).device)
+
+    # Ensure gradients are enabled
+    with torch.set_grad_enabled(True):
+        outputs = model(X_batch)
+        losses = criterion(outputs, y_batch)  # shape [B], still connected to graph
+
+        grad_norms = []
+        for i in range(X_batch.size(0)):
+            grads = torch.autograd.grad(
+                losses[i],
+                model.parameters(),
+                retain_graph=True,
+                create_graph=False
+            )
+            grad_norm = torch.cat([g.reshape(-1) for g in grads]).norm().item()
+            grad_norms.append(grad_norm)
+
+    # update dict {id: [count, sum, mean]}
+    for sample_id, gn in zip(sample_ids, grad_norms):
+        if len(grand_scores[sample_id]) == 0:
+            grand_scores[sample_id] = {
+                "count": 1,
+                "gn_sum": gn,
+                "gn_mean": gn
+            }
+            # grand_scores[sample_id].extend([1, gn, gn])  # count, sum, mean
+        else:
+            grand_scores[sample_id]["count"] += 1
+            grand_scores[sample_id]["gn_sum"] += gn
+            grand_scores[sample_id]["gn_mean"] = grand_scores[sample_id][1] / grand_scores[sample_id][0]
+            
+
+    return grand_scores
+
+
+            
+    
+def EL2N_score(probs, y, sample_ids, el2n_scores, epoch):
+    """
+    Compute/update EL2N scores.
+    
+    probs: [B, C] softmax probabilities
+    y:     [B] ground-truth labels
+    sample_ids: list/array of IDs for the batch
+    el2n_scores: dict {id: [count, sum, mean]} to be updated
+    """
+    one_hot = torch.nn.functional.one_hot(y, num_classes=probs.size(1)).float()
+    errors = torch.norm(probs - one_hot, dim=1)   # [B]
+
+    for sid, err in zip(sample_ids, errors):
+        err_val = err.item()
+        if sid not in el2n_scores:
+            el2n_scores[sid] = {
+                "epoch": epoch,
+                "sum": err_val,
+                "mean": err_val,
+            }
+        elif len(el2n_scores[sid]) == 0:
+            el2n_scores[sid].extend([epoch, err_val, err_val])  # count, sum, mean
+        else:
+            el2n_scores[sid]['epoch'] = epoch
+            el2n_scores[sid]['sum'] += err_val
+            el2n_scores[sid]['mean'] = el2n_scores[sid]['sum'] / el2n_scores[sid]['epoch']
+
+    return el2n_scores
+        
+            
+            
+def update_forgetting(logits, labels, sample_ids, epoch, forgetting_scores):
+    """
+    Update forgetting statistics.
+
+    forgetting_scores[sid] = {
+        "forget_count": int,
+        "first_learned": int or None,
+        "last_learn_epoch": int or None,
+        "correct_count": int,
+        "first_forget_epoch": int or None
+    }
+    """
+    preds = logits.argmax(dim=1)
+
+    for pred, label, sid in zip(preds, labels, sample_ids):
+        # Initialize entry if first time
+        if sid not in forgetting_scores:
+            forgetting_scores[sid] = {
+                "forget_count": 0,
+                "first_learned": None,
+                "last_learn_epoch": None,
+                "correct_count": 0,
+                "first_forget_epoch": None,
+                "_last_correct": False  # internal tracker, will be deleted later
+            }
+
+        entry = forgetting_scores[sid]
+        was_correct = entry["_last_correct"]
+        now_correct = (pred.item() == label.item())
+
+        # Count correct predictions
+        if now_correct:
+            entry["correct_count"] += 1
+            if entry["first_learned"] is None:
+                entry["first_learned"] = epoch
+            if not was_correct:  # flip from wrong → correct
+                entry["last_learn_epoch"] = epoch
+
+        # Forgetting event
+        if was_correct and not now_correct:
+            entry["forget_count"] += 1
+            if entry["first_forget_epoch"] is None:
+                entry["first_forget_epoch"] = epoch
+
+        # Update last correctness
+        entry["_last_correct"] = now_correct
+
+    return forgetting_scores
+
+
+
+
+
+def compute_gradient_norms_pass(model, loader, device, grad_norm_array, epoch_idx):
+    """
+    One pass over the training loader to compute per-sample gradient norms (GraNd signal).
+    Fills grad_norm_array[:, epoch_idx] in-place.
+
+    Only intended for the first few epochs (e.g. epoch_idx < 5).
+    loader must yield (X, y, idx, identifier) batches.
+
+    Args:
+        model: PyTorch model
+        loader: DataLoader yielding (X, y, idx, identifier)
+        device: torch device
+        grad_norm_array: np.ndarray of shape [N_samples, K_epochs], filled in-place
+        epoch_idx: column index (0-based) to write into grad_norm_array
+    """
+    model.eval()
+    criterion_none = torch.nn.CrossEntropyLoss(reduction='none')
+
+    for X, y, idx, _ in loader:
+        X = X.to(device, dtype=torch.float32)
+        y = y.to(device)
+        batch_size = X.size(0)
+
+        model.zero_grad()
+        outputs = model(X)
+        losses = criterion_none(outputs, y)  # [B]
+
+        for i in range(batch_size):
+            grads = torch.autograd.grad(
+                losses[i],
+                model.parameters(),
+                retain_graph=(i < batch_size - 1),
+                create_graph=False
+            )
+            grad_norm = torch.cat([g.reshape(-1) for g in grads]).norm().item()
+            grad_norm_array[idx[i].item(), epoch_idx] = grad_norm
+
+    model.train()
+
+
+from sklearn.neighbors import NearestNeighbors
+import torch
+import numpy as np
+
+
+def prediction_depth_knn(layer_reps, y, sample_ids, depth_scores, k=10):
+    """
+    layer_reps: dict[layer_idx -> tensor [N, D]] representations
+    y: [N] ground-truth labels (long tensor)
+    sample_ids: list of IDs
+    depth_scores: dict {id: [depth]} to be updated
+    k: neighbors
+    
+    Returns: updated depth_scores
+    """
+    N = y.size(0)
+    y_np = y.cpu().numpy()
+
+    # Init
+    for sid in sample_ids:
+        if sid not in depth_scores:
+            depth_scores[sid] = [float('inf')]
+
+    for layer_idx, X in layer_reps.items():
+        X_np = X.detach().cpu().numpy()
+
+        nn = NearestNeighbors(n_neighbors=k+1, metric="euclidean").fit(X_np)
+        _, neigh_idx = nn.kneighbors(X_np)
+
+        for i, sid in enumerate(sample_ids):
+            neighbors = neigh_idx[i][1:]  # exclude self
+            maj_vote = np.bincount(y_np[neighbors]).argmax()
+            if depth_scores[sid][0] == float('inf') and maj_vote == y_np[i]:
+                depth_scores[sid][0] = layer_idx
+
+    return depth_scores
+
+
+
+class TrainingSignalCollector:
+    """Collects and manages all per-sample training signals for DataGenome analysis.
+
+    Holds raw signal arrays (logits, loss, correctness, gradient norms) and
+    score dictionaries (AUM, EL2N, forgetting) updated each training batch.
+    """
+
+    def __init__(self, num_samples, epochs, num_classes):
+        self.aum_dict = {}
+        self.el2n_scores = {}
+        self.forgetting_scores = {}
+
+        self.logits_array = np.zeros((num_samples, epochs, num_classes), dtype=np.float16)
+        self.loss_array = np.zeros((num_samples, epochs), dtype=np.float32)
+        self.correct_array = np.zeros((num_samples, epochs), dtype=np.uint8)
+        self.grad_norm_epochs = min(5, epochs)
+        self.grad_norm_array = np.zeros((num_samples, self.grad_norm_epochs), dtype=np.float32)
+
+
+    def update_batch(self, output, conf, target, idx, identifier, epoch_num):
+        """Update all per-batch signals: raw arrays and score dicts."""
+        idx_np = idx.cpu().numpy()
+        ep = epoch_num - 1  # 0-based column index
+
+        self.logits_array[idx_np, ep, :] = output.detach().cpu().numpy()
+
+        per_sample_loss = F.cross_entropy(output.detach(), target.detach(), reduction='none')
+        self.loss_array[idx_np, ep] = per_sample_loss.cpu().numpy()
+
+        _, predicted = output.detach().max(1)
+        self.correct_array[idx_np, ep] = (predicted == target).cpu().numpy().astype(np.uint8)
+
+        id_list = identifier.tolist()
+        self.aum_dict = calculate_aum(output.detach().cpu(), target.detach().cpu(), id_list, self.aum_dict, epoch_num)
+        self.el2n_scores = EL2N_score(conf.detach().cpu(), target.detach().cpu(), id_list, self.el2n_scores, epoch_num)
+        self.forgetting_scores = update_forgetting(output.detach().cpu(), target.detach().cpu(), id_list, epoch_num, self.forgetting_scores)
+
+
+    def compute_grad_norms(self, model, loader, device, epoch_num):
+        """Compute gradient norms for the first grad_norm_epochs epochs."""
+        if epoch_num <= self.grad_norm_epochs:
+            compute_gradient_norms_pass(model, loader, device, self.grad_norm_array, epoch_num - 1)
+
+
+    def save_epoch_scores(self, epoch_num, aum_dir, el2n_dir, forgetting_dir, model, loader, device):
+        """Save AUM, EL2N, and forgetting score dicts as pickles for this epoch."""
+        with open(os.path.join(aum_dir, f"aum_dict_{epoch_num}.pkl"), "wb") as f:
+            pkl.dump(add_logits_to_aum_dict(model, loader, device, self.aum_dict), f)
+        with open(os.path.join(el2n_dir, f"el2n_score_dict_{epoch_num}.pkl"), "wb") as f:
+            pkl.dump(self.el2n_scores, f)
+        with open(os.path.join(forgetting_dir, f"forgetting_scores_dict_{epoch_num}.pkl"), "wb") as f:
+            pkl.dump(self.forgetting_scores, f)
+
+
+    def save_raw_arrays(self, raw_signals_dir):
+        """Save all raw signal arrays as .npy files."""
+        np.save(os.path.join(raw_signals_dir, "logits_array.npy"), self.logits_array)
+        np.save(os.path.join(raw_signals_dir, "loss_array.npy"), self.loss_array)
+        np.save(os.path.join(raw_signals_dir, "correct_array.npy"), self.correct_array)
+        np.save(os.path.join(raw_signals_dir, "grad_norm_array.npy"), self.grad_norm_array)
+
+
+    def save_dataset_snapshot(self, train_loader, raw_signals_dir):
+        """Save full training dataset (features + idx + true_label) as parquet.
+
+        idx is positional (0..N-1) assigned at dataset creation before training starts.
+        This snapshot lets post-training analysis join any row of the raw signal arrays
+        back to actual feature values and labels without re-loading the original data.
+        """
+        dataset = train_loader.dataset
+        N = len(dataset)
+        if hasattr(dataset, 'feature_columns'):
+            df = pd.DataFrame(dataset.x_data, columns=dataset.feature_columns)
+        else:
+            df = pd.DataFrame(dataset.x_data, columns=[f'feature_{i}' for i in range(dataset.x_data.shape[1])])
+        df.insert(0, 'idx', np.arange(N))
+        df['true_label'] = dataset.y_data
+        df.to_parquet(os.path.join(raw_signals_dir, "training_samples.parquet"), index=False)
+
+
+# import faiss
+# import numpy as np
+# import torch
+
+
+# def prediction_depth_knn_faiss(layer_storage, labels, sample_ids, k=10):
+#     """
+#     For each sample, finds the first layer where kNN agrees with the label.
+#     Returns dict mapping sample_id -> depth.
+#     """
+#     depth_scores = {sid: None for sid in sample_ids}
+#     labels = labels.numpy()
+
+#     for layer_idx, X in layer_storage.items():
+#         X = X.numpy().astype("float32")
+
+#         # FAISS index
+#         index = faiss.IndexFlatL2(X.shape[1])
+#         index.add(X)
+
+#         D, I = index.search(X, k + 1)  # include self
+#         knn_labels = labels[I[:, 1:]]  # skip self
+
+#         # majority vote
+#         preds = np.array([np.argmax(np.bincount(neigh)) for neigh in knn_labels])
+
+#         for i, sid in enumerate(sample_ids):
+#             if depth_scores[sid] is None and preds[i] == labels[i]:
+#                 depth_scores[sid] = layer_idx
+
+#     # fill unresolved with max depth
+#     for sid in sample_ids:
+#         if depth_scores[sid] is None:
+#             depth_scores[sid] = max(layer_storage.keys())
+
+#     return depth_scores
+
+
+# import numpy as np
+# import torch
+
+# def prediction_depth_knn_faiss(layer_storage, labels, sample_ids, k=10):
+#     """
+#     For each sample, finds the first layer where kNN agrees with the label.
+#     - Uses FAISS GPU if available
+#     - Falls back to FAISS CPU if no GPU
+#     - Falls back to sklearn if FAISS not installed
+
+#     Args:
+#         layer_storage: dict[layer_idx -> torch.Tensor [N, D]]
+#         labels: torch.Tensor [N]
+#         sample_ids: list of IDs
+#         k: number of neighbors
+
+#     Returns:
+#         depth_scores: dict {sample_id -> depth}
+#     """
+#     depth_scores = {sid: None for sid in sample_ids}
+#     labels = labels.cpu().numpy()
+
+#     # Try FAISS first
+#     try:
+#         import faiss
+#         use_gpu = faiss.get_num_gpus() > 0
+#         if use_gpu:
+#             res = faiss.StandardGpuResources()
+#     except ImportError:
+#         faiss = None
+#         use_gpu = False
+
+#     for layer_idx, X in layer_storage.items():
+#         X = X.detach().cpu().numpy().astype("float32")
+
+#         if faiss is not None:
+#             d = X.shape[1]
+#             index_flat = faiss.IndexFlatL2(d)
+
+#             if use_gpu:
+#                 index = faiss.index_cpu_to_gpu(res, 0, index_flat)
+#             else:
+#                 index = index_flat
+
+#             index.add(X)
+#             D, I = index.search(X, k + 1)  # include self
+#         else:
+#             # sklearn fallback
+#             from sklearn.neighbors import NearestNeighbors
+#             nn = NearestNeighbors(n_neighbors=k+1, metric="euclidean").fit(X)
+#             D, I = nn.kneighbors(X)
+
+#         knn_labels = labels[I[:, 1:]]  # skip self
+#         preds = np.array([np.argmax(np.bincount(neigh)) for neigh in knn_labels])
+
+#         for i, sid in enumerate(sample_ids):
+#             if depth_scores[sid] is None and preds[i] == labels[i]:
+#                 depth_scores[sid] = layer_idx
+
+#     # fill unresolved with max depth
+#     max_layer = max(layer_storage.keys())
+#     for sid in sample_ids:
+#         if depth_scores[sid] is None:
+#             depth_scores[sid] = max_layer
+
+#     return depth_scores
+

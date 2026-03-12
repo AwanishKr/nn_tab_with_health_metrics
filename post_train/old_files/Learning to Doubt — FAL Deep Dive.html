@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<!-- saved from url=(0053)file:///Users/e106496/Downloads/fal_explainer_v2.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning to Doubt — FAL Deep Dive</title>
+<link href="./Learning to Doubt — FAL Deep Dive_files/css2" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090f;
+  --s1:#0e1118;
+  --s2:#141720;
+  --s3:#1c2030;
+  --bdr:#232840;
+  --bdr2:#2e3450;
+  --blue:#5b8cff;
+  --red:#ff6b6b;
+  --green:#3de8b0;
+  --yellow:#f5c842;
+  --purple:#a78bfa;
+  --orange:#fb923c;
+  --txt:#dde2f0;
+  --muted:#7a82a2;
+  --dim:#3a4060;
+  --gblue:rgba(91,140,255,.14);
+  --ggreen:rgba(61,232,176,.1);
+  --gred:rgba(255,107,107,.1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:'Plus Jakarta Sans',sans-serif;font-size:15.5px;line-height:1.75;overflow-x:hidden}
+a{color:var(--blue);text-decoration:none}
+
+/* ── TYPOGRAPHY ── */
+h1,h2,h3,h4{font-family:'Fraunces',serif;line-height:1.1;letter-spacing:-.02em}
+h1{font-size:clamp(52px,9vw,110px)}
+h2{font-size:clamp(32px,5vw,62px);margin-bottom:18px}
+h3{font-size:clamp(20px,3vw,34px);margin-bottom:12px}
+h4{font-size:18px;margin-bottom:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600}
+p{color:var(--muted);max-width:680px;margin-bottom:14px}
+p.wide{max-width:900px}
+strong{color:var(--txt);font-weight:600}
+em{font-style:italic;color:var(--txt)}
+
+/* ── LAYOUT ── */
+.section{max-width:1140px;margin:0 auto;padding:90px 28px}
+.section.wide{max-width:1300px}
+hr.div{border:none;height:1px;background:linear-gradient(90deg,transparent,var(--bdr),transparent)}
+
+/* ── LABELS ── */
+.label{font-family:'DM Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.label::before{content:'';width:20px;height:1px;background:var(--blue)}
+
+/* ── TAGS ── */
+.tag{display:inline-block;font-family:'DM Mono',monospace;font-size:9.5px;padding:3px 11px;border-radius:100px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.tblue{background:rgba(91,140,255,.1);color:var(--blue);border:1px solid rgba(91,140,255,.22)}
+.tgreen{background:rgba(61,232,176,.1);color:var(--green);border:1px solid rgba(61,232,176,.22)}
+.tred{background:rgba(255,107,107,.1);color:var(--red);border:1px solid rgba(255,107,107,.22)}
+.tyellow{background:rgba(245,200,66,.1);color:var(--yellow);border:1px solid rgba(245,200,66,.22)}
+.tpurple{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.22)}
+.torange{background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.22)}
+
+/* ── CARDS ── */
+.card{background:var(--s1);border:1px solid var(--bdr);border-radius:18px;padding:28px 26px;transition:border-color .3s,transform .3s}
+.card:hover{border-color:var(--bdr2);transform:translateY(-3px)}
+.card-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:40px}
+.card-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:40px}
+.card-grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-top:40px}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 24px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 90% 70% at 50% -10%,rgba(91,140,255,.1) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 15% 85%,rgba(61,232,176,.06) 0%,transparent 60%),radial-gradient(ellipse 30% 25% at 85% 75%,rgba(167,139,250,.06) 0%,transparent 60%);pointer-events:none}
+.hero-badge{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.2);padding:7px 18px;border-radius:100px;margin-bottom:36px;display:inline-block;animation:fadeUp .8s ease both}
+.hero h1{animation:fadeUp .8s .1s ease both}
+.hero h1 em{font-style:italic;background:linear-gradient(135deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(15px,2.5vw,21px);color:var(--muted);max-width:620px;margin:20px auto 52px;font-weight:300;animation:fadeUp .8s .2s ease both}
+.scroll-hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.1em;animation:fadeUp .8s .4s ease both,pulse 2.5s 1s ease infinite;display:flex;flex-direction:column;align-items:center;gap:8px}
+.scroll-hint::after{content:'';width:1px;height:44px;background:linear-gradient(to bottom,var(--dim),transparent)}
+
+/* ── NAV ── */
+.sidenav{position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:200;display:flex;flex-direction:column;gap:9px}
+.snav-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);cursor:pointer;transition:all .3s}
+.snav-dot.active{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.snav-dot:hover{background:var(--blue)}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ── FORGETTING TRACK ── */
+.ftdemo{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;padding:36px;margin-top:44px}
+.track{margin-bottom:30px}
+.track-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.track-name{font-size:13px;font-weight:600;color:var(--txt);display:flex;align-items:center;gap:8px}
+.track-stats{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.epoch-dots{display:flex;gap:5px;flex-wrap:wrap}
+.dot{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;cursor:default;transition:transform .2s;position:relative}
+.dot:hover{transform:scale(1.18)}
+.dot.ok{background:rgba(61,232,176,.12);border:1px solid rgba(61,232,176,.28);color:var(--green)}
+.dot.no{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.28);color:var(--red)}
+.dot.fe{background:rgba(245,200,66,.15);border:2px solid rgba(245,200,66,.6);color:var(--yellow);box-shadow:0 0 14px rgba(245,200,66,.25);animation:forgflash 2.2s ease infinite}
+.ft-legend{display:flex;gap:20px;margin-top:20px;flex-wrap:wrap}
+.ft-leg-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.ft-leg-dot{width:14px;height:14px;border-radius:4px}
+
+/* ── STABILITY CARDS ── */
+.stab-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:44px}
+.stab-card{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:22px 18px;position:relative;overflow:hidden;transition:all .3s;cursor:default}
+.stab-card:hover{transform:translateY(-4px)}
+.stab-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 16px 16px}
+.sc-stable::after{background:var(--green)}
+.sc-medium::after{background:var(--yellow)}
+.sc-volatile::after{background:var(--red)}
+.sc-extreme::after{background:var(--red);opacity:.5}
+.mini-tl{display:flex;gap:3px;margin:10px 0 14px;flex-wrap:wrap}
+.md{width:10px;height:10px;border-radius:3px}
+.md.c{background:rgba(61,232,176,.55)}
+.md.w{background:rgba(255,107,107,.45)}
+.md.f{background:var(--yellow);box-shadow:0 0 5px rgba(245,200,66,.5)}
+.sm{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--muted);margin-bottom:3px;display:flex;justify-content:space-between}
+.sm span{font-weight:500}
+.cbar-wrap{background:rgba(255,255,255,.05);border-radius:4px;height:5px;margin-top:10px;overflow:hidden}
+.cbar{height:100%;border-radius:4px}
+
+/* ── FORMULA ── */
+.fblock{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;padding:36px;margin-top:44px;position:relative;overflow:hidden}
+.fblock::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--green))}
+.fdisp{background:var(--bg);border:1px solid var(--bdr);border-radius:12px;padding:26px 30px;font-family:'DM Mono',monospace;font-size:14.5px;line-height:2.4;color:var(--txt);margin:22px 0;overflow-x:auto}
+.fb{color:var(--blue)}.fr{color:var(--red)}.fg{color:var(--green)}.fy{color:var(--yellow)}.fp{color:var(--purple)}.fo{color:var(--orange)}
+.fparts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.fpart{background:var(--s2);border:1px solid var(--bdr);border-radius:12px;padding:18px}
+.fpart h5{font-family:'DM Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;font-weight:500}
+.fpart p{font-size:12.5px;color:var(--muted);margin:0;max-width:none}
+
+/* ── DEEP DIVE BOXES ── */
+.deep-box{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;overflow:hidden;margin-top:28px}
+.deep-box-hdr{padding:20px 28px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px}
+.deep-box-hdr h4{margin:0;font-size:14px}
+.deep-box-body{padding:28px}
+
+/* ── ISOTONIC VIZ ── */
+.isotonic-viz{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
+.iso-panel{background:var(--bg);border:1px solid var(--bdr);border-radius:14px;padding:22px}
+.iso-panel h5{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--txt)}
+.scatter-area{height:180px;position:relative;border-bottom:1px solid var(--bdr);border-left:1px solid var(--bdr);margin:0 10px 24px 24px}
+.scatter-dot{position:absolute;width:10px;height:10px;border-radius:50%;transform:translate(-50%,50%);transition:all .5s}
+.axis-lbl{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--dim);position:absolute}
+.iso-diagonal{position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(to right bottom,transparent 49%,rgba(255,255,255,.06) 50%,transparent 51%)}
+
+/* ── PAIRWISE ANIMATION ── */
+.pair-demo{background:var(--bg);border:1px solid var(--bdr);border-radius:14px;padding:22px;margin-top:28px}
+.pair-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.pair-sample{background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;flex:1;min-width:160px}
+.pair-sample h5{font-size:12px;font-weight:600;margin-bottom:6px;color:var(--txt)}
+.pair-arrow{font-size:22px;color:var(--dim);flex-shrink:0}
+.pair-verdict{background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px 16px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);flex-shrink:0;min-width:160px}
+.pair-verdict.bad{background:rgba(255,107,107,.07);border-color:rgba(255,107,107,.22);color:var(--red)}
+.pair-verdict.good{background:rgba(61,232,176,.07);border-color:rgba(61,232,176,.22);color:var(--green)}
+
+/* ── SLIDER ── */
+.slider-demo{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;padding:36px;margin-top:40px}
+.srow{display:grid;grid-template-columns:180px 1fr;gap:20px;align-items:center;margin-bottom:20px}
+.slbl{font-size:13px;font-weight:500;color:var(--txt)}
+.slbl small{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:100px;background:var(--bdr);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px var(--blue);cursor:pointer}
+.barviz{display:flex;gap:10px;align-items:flex-end;height:150px;margin-top:28px}
+.bvi{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px}
+.bv-cont{width:100%;background:rgba(255,255,255,.04);border-radius:5px 5px 0 0;height:110px;position:relative;display:flex;align-items:flex-end;overflow:hidden}
+.bv-fill{width:100%;border-radius:3px 3px 0 0;transition:height .55s cubic-bezier(.4,0,.2,1)}
+.bv-lbl{font-family:'DM Mono',monospace;font-size:8.5px;text-align:center;color:var(--muted);letter-spacing:.04em;white-space:pre}
+.bv-val{font-family:'DM Mono',monospace;font-size:11.5px;font-weight:500;text-align:center}
+
+/* ── FLOW STEPS ── */
+.flow{display:flex;flex-direction:column;gap:0;margin-top:44px;position:relative}
+.flow::before{content:'';position:absolute;left:30px;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,var(--blue),var(--green),var(--red),var(--yellow));opacity:.25}
+.fstep{display:grid;grid-template-columns:72px 1fr;gap:28px;padding-bottom:44px;align-items:start}
+.fstep-num{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:22px;flex-shrink:0;position:relative;z-index:1}
+.fn1{background:rgba(91,140,255,.14);border:1px solid rgba(91,140,255,.3);color:var(--blue)}
+.fn2{background:rgba(61,232,176,.14);border:1px solid rgba(61,232,176,.3);color:var(--green)}
+.fn3{background:rgba(255,107,107,.14);border:1px solid rgba(255,107,107,.3);color:var(--red)}
+.fn4{background:rgba(245,200,66,.14);border:1px solid rgba(245,200,66,.3);color:var(--yellow)}
+.fn5{background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.3);color:var(--purple)}
+.fstep-body{padding-top:6px}
+.fstep-body p{font-size:14px;max-width:none;color:var(--muted);margin-bottom:10px}
+.cpill{display:inline-block;font-family:'DM Mono',monospace;font-size:11.5px;background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.2);color:var(--blue);padding:3px 11px;border-radius:6px;margin:3px 5px 3px 0}
+.gpill{background:rgba(61,232,176,.1);border-color:rgba(61,232,176,.2);color:var(--green)}
+.rpill{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.2);color:var(--red)}
+
+/* ── INTUITION BOX ── */
+.intuition{background:linear-gradient(135deg,rgba(91,140,255,.06),rgba(61,232,176,.06));border:1px solid rgba(91,140,255,.2);border-radius:16px;padding:26px 28px;margin:20px 0}
+.intuition .iq{font-size:11px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.12em;color:var(--blue);margin-bottom:10px}
+.intuition p{font-size:14px;color:var(--txt);max-width:none;margin-bottom:0}
+
+/* ── EXAMPLE BOX ── */
+.example{background:var(--s2);border:1px solid var(--bdr2);border-left:3px solid var(--yellow);border-radius:0 12px 12px 0;padding:18px 22px;margin:16px 0}
+.example .ex-label{font-size:10px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.12em;color:var(--yellow);margin-bottom:8px}
+.example p{font-size:13.5px;color:var(--txt);max-width:none;margin-bottom:0}
+
+/* ── CAL+FAL SECTION ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:40px}
+.signal-card{background:var(--s1);border:1px solid var(--bdr);border-radius:18px;padding:28px;position:relative;overflow:hidden}
+.signal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.sc-cal::before{background:var(--blue)}
+.sc-fal::before{background:var(--green)}
+.signal-card h4{font-size:17px;font-weight:600;margin-bottom:10px}
+.mono-box{background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;font-family:'DM Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.9}
+.mono-box .h{color:var(--txt);font-weight:500}
+.joint-card{background:linear-gradient(135deg,rgba(91,140,255,.07),rgba(61,232,176,.07));border:1px solid rgba(91,140,255,.25);border-radius:20px;padding:32px;margin-top:20px;text-align:center}
+.joint-card h3{background:linear-gradient(135deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:14px}
+
+/* ── VENN DIAGRAM ── */
+.venn-wrap{display:flex;justify-content:center;align-items:center;margin-top:36px;padding:20px}
+.venn-svg{max-width:520px;width:100%}
+
+/* ── SCENARIO TABLE ── */
+.scenario-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:36px;border-radius:14px;overflow:hidden}
+.scen-cell{background:var(--s1);padding:18px 16px;border:1px solid var(--bdr)}
+.scen-cell.hdr{background:var(--s2);font-size:11px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
+.scen-cell.good-cell{background:rgba(61,232,176,.05);border-color:rgba(61,232,176,.2)}
+.scen-cell.warn-cell{background:rgba(245,200,66,.05);border-color:rgba(245,200,66,.2)}
+.scen-cell.bad-cell{background:rgba(255,107,107,.05);border-color:rgba(255,107,107,.2)}
+.scen-cell p{font-size:12.5px;color:var(--muted);max-width:none;margin:0}
+.scen-cell .cv{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;margin-bottom:4px}
+
+/* ── RELIABILITY DIAGRAM ── */
+.rel-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:40px}
+.rel-panel{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:24px}
+.rel-panel h5{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--txt)}
+.rel-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:16px}
+.rel-chart{position:relative;height:200px;margin-bottom:12px}
+.rel-bars{display:flex;gap:6px;align-items:flex-end;height:180px;position:relative;z-index:2}
+.rel-bin{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.rb-acc{width:100%;border-radius:3px 3px 0 0;transition:height .8s ease}
+.rb-conf-line{position:absolute;left:0;right:0;height:2px;border-top:2px dashed rgba(245,200,66,.7);transition:bottom .8s ease}
+.rb-lbl{font-family:'DM Mono',monospace;font-size:8px;color:var(--dim);margin-top:5px;text-align:center}
+.rel-legend{display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+.rll{display:flex;align-items:center;gap:6px}
+.rll-box{width:12px;height:12px;border-radius:3px}
+
+/* ── RESULTS TABLE ── */
+.rtable-wrap{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;overflow:hidden;margin-top:44px}
+.rt-hdr{padding:20px 28px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center}
+.rt-hdr h4{font-size:14px;font-weight:600;margin-bottom:0}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead tr{background:var(--s2)}
+th{padding:11px 18px;text-align:left;font-family:'DM Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;border-bottom:1px solid var(--bdr)}
+td{padding:13px 18px;border-bottom:1px solid var(--bdr);color:var(--muted);font-family:'DM Mono',monospace;font-size:12px}
+tr:last-child td{border-bottom:none}
+td:first-child{color:var(--txt);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500}
+tr.hl{background:rgba(91,140,255,.04)}
+.bv{color:var(--green);font-weight:600}
+.bv::after{content:'★';font-size:7px;margin-left:3px;vertical-align:super}
+
+/* ── FRAUD SECTION ── */
+.fraud-hero{background:linear-gradient(135deg,rgba(255,107,107,.07),rgba(251,146,60,.05));border:1px solid rgba(255,107,107,.2);border-radius:24px;padding:40px;margin-bottom:36px;position:relative;overflow:hidden}
+.fraud-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,107,107,.1) 0%,transparent 70%);pointer-events:none}
+.fraud-hero h3{font-size:clamp(24px,4vw,42px);margin-bottom:14px}
+.fraud-timeline{display:flex;flex-direction:column;gap:0;margin-top:36px}
+.ftl-item{display:grid;grid-template-columns:60px 1fr;gap:20px;padding-bottom:32px;align-items:start}
+.ftl-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.fraud-scenario{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:22px;margin:8px 0;position:relative}
+.fraud-scenario .conf-badge{position:absolute;top:14px;right:14px;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px}
+.cbad{background:rgba(255,107,107,.15);color:var(--red);border:1px solid rgba(255,107,107,.3)}
+.cgood{background:rgba(61,232,176,.15);color:var(--green);border:1px solid rgba(61,232,176,.3)}
+.cwarn{background:rgba(245,200,66,.15);color:var(--yellow);border:1px solid rgba(245,200,66,.3)}
+.cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.cost-card{background:var(--bg);border:1px solid var(--bdr);border-radius:14px;padding:22px}
+.cost-card .cost-num{font-family:'Fraunces',serif;font-size:36px;margin-bottom:6px}
+.cost-card p{font-size:13px;max-width:none;margin:0}
+.threshold-demo{background:var(--bg);border:1px solid var(--bdr);border-radius:14px;padding:22px;margin-top:20px}
+.threshold-bar{position:relative;height:40px;background:var(--s2);border-radius:8px;margin:16px 0;overflow:hidden}
+.tb-good-zone{position:absolute;left:0;top:0;bottom:0;background:rgba(61,232,176,.15)}
+.tb-thresh{position:absolute;top:0;bottom:0;width:2px;background:var(--yellow)}
+.tb-bad-zone{position:absolute;right:0;top:0;bottom:0;background:rgba(255,107,107,.12)}
+.tb-dot{position:absolute;top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%}
+.ece-impact{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}
+.ece-box{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:22px;text-align:center}
+.ece-box .ece-num{font-family:'Fraunces',serif;font-size:40px;margin-bottom:4px}
+.ece-box .ece-label{font-size:12px;color:var(--muted)}
+.trust-meter{background:var(--bg);border:1px solid var(--bdr);border-radius:14px;padding:24px;margin-top:28px}
+.tm-bar{height:28px;background:var(--s2);border-radius:100px;overflow:hidden;margin-top:12px;position:relative}
+.tm-fill{height:100%;border-radius:100px;display:flex;align-items:center;padding-left:12px;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes forgflash{0%,100%{box-shadow:0 0 0 rgba(245,200,66,0)}50%{box-shadow:0 0 18px rgba(245,200,66,.45)}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .card-grid-2,.card-grid-3,.card-grid-4,.two-col,.rel-wrap,.isotonic-viz,.stab-grid,.scenario-grid{grid-template-columns:1fr 1fr}
+  .fparts,.cost-grid,.ece-impact{grid-template-columns:1fr 1fr}
+  .fstep{grid-template-columns:1fr}.flow::before{display:none}
+  .srow{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .card-grid-2,.card-grid-3,.card-grid-4,.two-col,.rel-wrap,.isotonic-viz,.stab-grid,.scenario-grid,.cost-grid,.ece-impact{grid-template-columns:1fr}
+  .fparts{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="sidenav" id="sidenav">
+  <div class="snav-dot" data-s="hero"></div>
+  <div class="snav-dot" data-s="s1"></div>
+  <div class="snav-dot" data-s="s2"></div>
+  <div class="snav-dot" data-s="s3"></div>
+  <div class="snav-dot" data-s="s4"></div>
+  <div class="snav-dot" data-s="s5"></div>
+  <div class="snav-dot active" data-s="s6"></div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     HERO
+══════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <span class="hero-badge">Forgetting-Aware Learning · Deep Visual Explainer</span>
+  <h1>Learning<br>to <em>Doubt</em></h1>
+  <p class="hero-sub">How tracking what a neural network <em>forgets</em> during training teaches it to say "I'm not sure" when it genuinely shouldn't be.</p>
+  <span class="scroll-hint">SCROLL TO EXPLORE</span>
+</section>
+
+<hr class="div">
+
+<!-- ══════════════════════════════════════
+     01 — WHAT IS CALIBRATION
+══════════════════════════════════════ -->
+<section class="section" id="s1">
+  <p class="label">01 — The Foundation</p>
+  <h2>What does it mean<br>to be <em>calibrated?</em></h2>
+  <p class="wide">Before understanding FAL, we need to understand what calibration is and why modern neural networks — despite record-breaking accuracy — systematically fail at it.</p>
+
+  <div class="intuition reveal visible">
+    <div class="iq">💡 Core Intuition</div>
+    <p>If your model says "90% confidence" on 100 different predictions, exactly 90 of them should be correct. Not 60. Not 99. Exactly 90. When this relationship holds across all confidence levels, your model is <strong>perfectly calibrated</strong>. When it doesn't — when 90% confidence really means 60% correctness — you have a calibration problem.</p>
+  </div>
+
+  <div class="card-grid-3 reveal visible">
+    <div class="card">
+      <span class="tag tblue">From Guo et al. 2017</span>
+      <h4>Modern NNs Are Badly Miscalibrated</h4>
+      <p style="max-width:none;font-size:13.5px">A landmark study found that a 110-layer ResNet on CIFAR-100 had an ECE of ~30.6% — meaning the gap between its stated confidence and actual accuracy was enormous. A shallow 5-layer LeNet from 1998 was far better calibrated, despite being far less accurate.</p>
+    </div>
+    <div class="card">
+      <span class="tag tred">The Paradox</span>
+      <h4>More Accurate ≠ More Reliable</h4>
+      <p style="max-width:none;font-size:13.5px">Depth, width, weight decay, and Batch Normalization all improve accuracy — but they all <em>worsen</em> calibration. The very tricks that make NNs powerful are what make them overconfident. Accuracy and calibration can trade off against each other.</p>
+    </div>
+    <div class="card">
+      <span class="tag tyellow">Why It Matters</span>
+      <h4>Downstream Decisions Depend on Confidence</h4>
+      <p style="max-width:none;font-size:13.5px">A self-driving car that says "99% sure no pedestrian" when it's actually 70% sure might skip braking. A medical diagnosis model at "95%" confidence causes a doctor to skip review. Miscalibration turns high accuracy into a liability.</p>
+    </div>
+  </div>
+
+  <!-- Reliability Diagram -->
+  <div class="rel-wrap reveal visible">
+    <div class="rel-panel">
+      <h5>Reliability Diagram — Miscalibrated Model</h5>
+      <div class="rel-sub">Bars = actual accuracy per bin. Dashed line = stated confidence. Gap = calibration error.</div>
+      <div class="rel-chart">
+        <div class="rel-bars" id="relBad"><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 8%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 9%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.1</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 15%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 19%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.2</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 22%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 29%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.3</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 32%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 39%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.4</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 42%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 49%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.5</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 50%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 59%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.6</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 48%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 69%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.7</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 42%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 79%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.8</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 35%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 89%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.9</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 25%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 99%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(245, 200, 66, 0.8); opacity: 0.8;"></div><div class="rb-lbl">1.0</div></div></div>
+      </div>
+      <div class="rel-legend">
+        <div class="rll"><div class="rll-box" style="background:rgba(91,140,255,.4)"></div>Actual accuracy</div>
+        <div class="rll"><div class="rll-box" style="background:rgba(245,200,66,.7)"></div>Stated confidence</div>
+      </div>
+      <p style="font-size:12px;color:var(--dim);margin-top:10px;max-width:none">Model says "90% confident" but is only ~55% accurate in that bin. ECE is high.</p>
+    </div>
+    <div class="rel-panel">
+      <h5>Reliability Diagram — Well-Calibrated Model</h5>
+      <div class="rel-sub">Bars align with dashed line. Confidence = accuracy. ECE ≈ 0.</div>
+      <div class="rel-chart">
+        <div class="rel-bars" id="relGood"><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 9%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 9%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.1</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 18%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 19%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.2</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 30%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 29%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.3</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 39%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 39%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.4</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 49%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 49%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.5</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 60%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 59%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.6</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 70%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 69%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.7</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 78%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 79%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.8</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 88%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 89%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">0.9</div></div><div class="rel-bin" style="flex: 1 1 0%; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; justify-content: flex-end;"><div class="rb-acc" style="width: 100%; height: 91%; background: rgba(91, 140, 255, 0.35); border-radius: 3px 3px 0px 0px; border: 1px solid rgba(91, 140, 255, 0.5);"></div><div class="rb-conf-line" style="position: absolute; bottom: 99%; left: 0px; right: 0px; height: 2px; border-top: 2px dashed rgba(61, 232, 176, 0.8); opacity: 0.8;"></div><div class="rb-lbl">1.0</div></div></div>
+      </div>
+      <div class="rel-legend">
+        <div class="rll"><div class="rll-box" style="background:rgba(91,140,255,.4)"></div>Actual accuracy</div>
+        <div class="rll"><div class="rll-box" style="background:rgba(61,232,176,.7)"></div>Stated confidence</div>
+      </div>
+      <p style="font-size:12px;color:var(--dim);margin-top:10px;max-width:none">When model says "90% confident", it's actually right ~89% of the time. Great calibration.</p>
+    </div>
+  </div>
+
+  <div class="example reveal visible">
+    <div class="ex-label">🩺 Concrete Example</div>
+    <p>Imagine a cancer screening model that classifies 1000 scans as "benign" with 95% confidence. A perfectly calibrated model would mean ~950 are genuinely benign. A miscalibrated model might mean only 700 are benign — but the doctor, trusting the 95% figure, skips reviewing all 1000. That's 250 missed cancers. The confidence number isn't cosmetic — it directly affects decisions.</p>
+  </div>
+
+  <div class="card-grid-2 reveal visible" style="margin-top:32px">
+    <div class="card">
+      <span class="tag tblue">ECE (Expected Calibration Error)</span>
+      <h4>How We Measure Calibration</h4>
+      <p style="max-width:none;font-size:13.5px">ECE bins predictions by confidence, computes the weighted average gap between accuracy and confidence per bin. Perfect calibration = ECE of 0. A model with ECE of 19% is badly miscalibrated. FAL reduces ECE from 19% → 9.4% on CIFAR-100.</p>
+      <div class="fdisp" style="font-size:12px;line-height:1.9;margin-top:10px">
+        ECE = Σ<sub>b</sub> (|B<sub>b</sub>|/n) · |acc(B<sub>b</sub>) − conf(B<sub>b</sub>)|
+      </div>
+    </div>
+    <div class="card">
+      <span class="tag tpurple">AURC (Area Under Risk-Coverage)</span>
+      <h4>How We Measure Ordinal Ranking</h4>
+      <p style="max-width:none;font-size:13.5px">AURC measures whether the model assigns <em>higher confidence to correct predictions</em> and lower to errors. A model with good AURC can be trusted for "abstaining" — it knows when it doesn't know. FAL improves AURC alongside ECE.</p>
+      <div style="background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:14px;margin-top:10px;font-size:12.5px;color:var(--muted)">
+        Low AURC → model reliably ranks its own errors at the bottom of its confidence scale. High AURC → model is just as confident about wrong predictions as correct ones.
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- ══════════════════════════════════════
+     02 — FORGETTING EVENTS
+══════════════════════════════════════ -->
+<section class="section" id="s2">
+  <p class="label">02 — The Key Insight</p>
+  <h2>What is a <em>Forgetting Event</em>?</h2>
+  <p class="wide">Standard training ignores the <em>history</em> of each prediction. FAL exploits this history. The core observation: examples that keep flip-flopping from correct to wrong are ones the model has never truly learned.</p>
+
+  <div class="intuition reveal visible">
+    <div class="iq">💡 The Temporal Signal</div>
+    <p>Think of studying for an exam. A student who answers a practice question correctly every single time has truly learned it. A student who alternates between right and wrong — getting it right on Monday, wrong on Wednesday, right on Friday — hasn't. The flip-flopping <em>is itself evidence of fragile knowledge</em>. FAL detects exactly these flip-flops in a neural network's training history and uses them as a proxy for epistemic uncertainty.</p>
+  </div>
+
+  <div class="ftdemo reveal visible">
+    <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:28px">Classification history across 20 training epochs (hover for details)</div>
+
+    <div class="track">
+      <div class="track-hdr">
+        <span class="track-name"><span style="color:var(--green)">●</span> Sample A — Clear "cat" photo, correct lighting</span>
+        <span class="track-stats">⚡ Forgetting events: <strong style="color:var(--green)">0</strong> &nbsp;|&nbsp; Stability: <strong style="color:var(--green)">High</strong></span>
+      </div>
+      <div class="epoch-dots" id="tA"><div class="dot no" title="Epoch 1: ✗ Wrong">✗</div><div class="dot no" title="Epoch 2: ✗ Wrong">✗</div><div class="dot ok" title="Epoch 3: ✓ Correct">✓</div><div class="dot ok" title="Epoch 4: ✓ Correct">✓</div><div class="dot ok" title="Epoch 5: ✓ Correct">✓</div><div class="dot ok" title="Epoch 6: ✓ Correct">✓</div><div class="dot ok" title="Epoch 7: ✓ Correct">✓</div><div class="dot ok" title="Epoch 8: ✓ Correct">✓</div><div class="dot ok" title="Epoch 9: ✓ Correct">✓</div><div class="dot ok" title="Epoch 10: ✓ Correct">✓</div><div class="dot ok" title="Epoch 11: ✓ Correct">✓</div><div class="dot ok" title="Epoch 12: ✓ Correct">✓</div><div class="dot ok" title="Epoch 13: ✓ Correct">✓</div><div class="dot ok" title="Epoch 14: ✓ Correct">✓</div><div class="dot ok" title="Epoch 15: ✓ Correct">✓</div><div class="dot ok" title="Epoch 16: ✓ Correct">✓</div><div class="dot ok" title="Epoch 17: ✓ Correct">✓</div><div class="dot ok" title="Epoch 18: ✓ Correct">✓</div><div class="dot ok" title="Epoch 19: ✓ Correct">✓</div><div class="dot ok" title="Epoch 20: ✓ Correct">✓</div></div>
+    </div>
+
+    <div class="track">
+      <div class="track-hdr">
+        <span class="track-name"><span style="color:var(--yellow)">●</span> Sample B — Blurry, ambiguous silhouette</span>
+        <span class="track-stats">⚡ Forgetting events: <strong style="color:var(--yellow)">3</strong> &nbsp;|&nbsp; Stability: <strong style="color:var(--yellow)">Medium</strong></span>
+      </div>
+      <div class="epoch-dots" id="tB"><div class="dot ok" title="Epoch 1: ✓ Correct">✓</div><div class="dot ok" title="Epoch 2: ✓ Correct">✓</div><div class="dot fe" title="Epoch 3: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 4: ✓ Correct">✓</div><div class="dot ok" title="Epoch 5: ✓ Correct">✓</div><div class="dot fe" title="Epoch 6: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 7: ✓ Correct">✓</div><div class="dot ok" title="Epoch 8: ✓ Correct">✓</div><div class="dot ok" title="Epoch 9: ✓ Correct">✓</div><div class="dot fe" title="Epoch 10: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 11: ✓ Correct">✓</div><div class="dot ok" title="Epoch 12: ✓ Correct">✓</div><div class="dot ok" title="Epoch 13: ✓ Correct">✓</div><div class="dot ok" title="Epoch 14: ✓ Correct">✓</div><div class="dot ok" title="Epoch 15: ✓ Correct">✓</div><div class="dot fe" title="Epoch 16: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 17: ✓ Correct">✓</div><div class="dot ok" title="Epoch 18: ✓ Correct">✓</div><div class="dot ok" title="Epoch 19: ✓ Correct">✓</div><div class="dot ok" title="Epoch 20: ✓ Correct">✓</div></div>
+    </div>
+
+    <div class="track">
+      <div class="track-hdr">
+        <span class="track-name"><span style="color:var(--red)">●</span> Sample C — Noisy image near decision boundary</span>
+        <span class="track-stats">⚡ Forgetting events: <strong style="color:var(--red)">6</strong> &nbsp;|&nbsp; Stability: <strong style="color:var(--red)">Low</strong></span>
+      </div>
+      <div class="epoch-dots" id="tC"><div class="dot ok" title="Epoch 1: ✓ Correct">✓</div><div class="dot fe" title="Epoch 2: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 3: ✓ Correct">✓</div><div class="dot fe" title="Epoch 4: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 5: ✓ Correct">✓</div><div class="dot fe" title="Epoch 6: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 7: ✓ Correct">✓</div><div class="dot ok" title="Epoch 8: ✓ Correct">✓</div><div class="dot fe" title="Epoch 9: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 10: ✓ Correct">✓</div><div class="dot fe" title="Epoch 11: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 12: ✓ Correct">✓</div><div class="dot fe" title="Epoch 13: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 14: ✓ Correct">✓</div><div class="dot fe" title="Epoch 15: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 16: ✓ Correct">✓</div><div class="dot fe" title="Epoch 17: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 18: ✓ Correct">✓</div><div class="dot ok" title="Epoch 19: ✓ Correct">✓</div><div class="dot fe" title="Epoch 20: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div></div>
+    </div>
+
+    <div class="track">
+      <div class="track-hdr">
+        <span class="track-name"><span style="color:var(--red)">●</span> Sample D — Possible mislabeled example</span>
+        <span class="track-stats">⚡ Forgetting events: <strong style="color:var(--red)">9</strong> &nbsp;|&nbsp; Stability: <strong style="color:var(--red)">Very Low</strong></span>
+      </div>
+      <div class="epoch-dots" id="tD"><div class="dot ok" title="Epoch 1: ✓ Correct">✓</div><div class="dot fe" title="Epoch 2: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 3: ✓ Correct">✓</div><div class="dot fe" title="Epoch 4: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 5: ✓ Correct">✓</div><div class="dot fe" title="Epoch 6: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 7: ✓ Correct">✓</div><div class="dot fe" title="Epoch 8: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 9: ✓ Correct">✓</div><div class="dot fe" title="Epoch 10: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 11: ✓ Correct">✓</div><div class="dot fe" title="Epoch 12: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 13: ✓ Correct">✓</div><div class="dot fe" title="Epoch 14: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot ok" title="Epoch 15: ✓ Correct">✓</div><div class="dot fe" title="Epoch 16: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot no" title="Epoch 17: ✗ Wrong">✗</div><div class="dot ok" title="Epoch 18: ✓ Correct">✓</div><div class="dot fe" title="Epoch 19: ✗ Wrong ⚡ FORGETTING EVENT">⚡</div><div class="dot no" title="Epoch 20: ✗ Wrong">✗</div></div>
+    </div>
+
+    <div class="ft-legend">
+      <div class="ft-leg-item"><div class="ft-leg-dot" style="background:rgba(61,232,176,.5)"></div>✓ Correct</div>
+      <div class="ft-leg-item"><div class="ft-leg-dot" style="background:rgba(255,107,107,.5)"></div>✗ Wrong</div>
+      <div class="ft-leg-item"><div class="ft-leg-dot" style="background:var(--yellow)"></div>⚡ Forgetting event (✓→✗)</div>
+    </div>
+  </div>
+
+  <div class="example reveal visible" style="border-left-color:var(--blue)">
+    <div class="ex-label" style="color:var(--blue)">🔍 Why CAL Alone Is Not Enough</div>
+    <p>Now consider Sample B and Sample C above. After 20 epochs, Sample B has been correct 14 out of 20 times (70%). Sample C has also been correct 14 out of 20 times (70%). Their <strong>average correctness is identical</strong> — so CAL treats them the same. But Sample C's correctness is far more volatile: it alternates constantly. FAL distinguishes them by counting the <em>transitions</em>, not the average.</p>
+  </div>
+
+  <!-- Stability card grid -->
+  <div class="stab-grid reveal visible">
+    <div class="stab-card sc-stable">
+      <span class="tag tgreen">k=0 · Very Stable</span>
+      <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px">Clean, easy example</div>
+      <div class="mini-tl">
+        <div class="md c"></div><div class="md c"></div><div class="md c"></div><div class="md c"></div><div class="md c"></div>
+        <div class="md c"></div><div class="md c"></div><div class="md c"></div><div class="md c"></div><div class="md c"></div>
+      </div>
+      <div class="sm">Forgetting count k<sub>i</sub> <span style="color:var(--green)">0</span></div>
+      <div class="sm">Stability s<sub>i</sub> = 1 − k/T <span style="color:var(--green)">1.00</span></div>
+      <div class="sm" style="margin-top:8px;font-size:9.5px;color:var(--dim)">Target confidence ceiling</div>
+      <div class="cbar-wrap"><div class="cbar" style="width:92%;background:var(--green)"></div></div>
+      <div style="font-size:10.5px;color:var(--green);margin-top:6px;font-family:&#39;DM Mono&#39;,monospace">92% → ALLOWED</div>
+    </div>
+    <div class="stab-card sc-medium">
+      <span class="tag tyellow">k=3 · Moderate</span>
+      <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px">Somewhat ambiguous</div>
+      <div class="mini-tl">
+        <div class="md c"></div><div class="md c"></div><div class="md f"></div><div class="md w"></div><div class="md c"></div>
+        <div class="md c"></div><div class="md f"></div><div class="md w"></div><div class="md c"></div><div class="md c"></div>
+      </div>
+      <div class="sm">Forgetting count k<sub>i</sub> <span style="color:var(--yellow)">3</span></div>
+      <div class="sm">Stability s<sub>i</sub> = 1 − k/T <span style="color:var(--yellow)">0.70</span></div>
+      <div class="sm" style="margin-top:8px;font-size:9.5px;color:var(--dim)">Target confidence ceiling</div>
+      <div class="cbar-wrap"><div class="cbar" style="width:60%;background:var(--yellow)"></div></div>
+      <div style="font-size:10.5px;color:var(--yellow);margin-top:6px;font-family:&#39;DM Mono&#39;,monospace">60% → CAPPED</div>
+    </div>
+    <div class="stab-card sc-volatile">
+      <span class="tag tred">k=6 · Highly Volatile</span>
+      <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px">Noisy/near boundary</div>
+      <div class="mini-tl">
+        <div class="md c"></div><div class="md f"></div><div class="md w"></div><div class="md c"></div><div class="md f"></div>
+        <div class="md w"></div><div class="md c"></div><div class="md f"></div><div class="md w"></div><div class="md f"></div>
+      </div>
+      <div class="sm">Forgetting count k<sub>i</sub> <span style="color:var(--red)">6</span></div>
+      <div class="sm">Stability s<sub>i</sub> = 1 − k/T <span style="color:var(--red)">0.40</span></div>
+      <div class="sm" style="margin-top:8px;font-size:9.5px;color:var(--dim)">Target confidence ceiling</div>
+      <div class="cbar-wrap"><div class="cbar" style="width:30%;background:var(--red)"></div></div>
+      <div style="font-size:10.5px;color:var(--red);margin-top:6px;font-family:&#39;DM Mono&#39;,monospace">30% → PENALIZED</div>
+    </div>
+    <div class="stab-card sc-extreme">
+      <span class="tag tred">k=9 · Mislabeled</span>
+      <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px">Possible wrong label</div>
+      <div class="mini-tl">
+        <div class="md f"></div><div class="md w"></div><div class="md c"></div><div class="md f"></div><div class="md w"></div>
+        <div class="md c"></div><div class="md f"></div><div class="md w"></div><div class="md f"></div><div class="md w"></div>
+      </div>
+      <div class="sm">Forgetting count k<sub>i</sub> <span style="color:var(--red)">9</span></div>
+      <div class="sm">Stability s<sub>i</sub> = 1 − k/T <span style="color:var(--red)">0.10</span></div>
+      <div class="sm" style="margin-top:8px;font-size:9.5px;color:var(--dim)">Target confidence ceiling</div>
+      <div class="cbar-wrap"><div class="cbar" style="width:10%;background:var(--red);opacity:.7"></div></div>
+      <div style="font-size:10.5px;color:var(--red);margin-top:6px;font-family:&#39;DM Mono&#39;,monospace;opacity:.7">10% → STRONGLY PENALIZED</div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- ══════════════════════════════════════
+     03 — THE FAL REGULARIZER (DEEP DIVE)
+══════════════════════════════════════ -->
+<section class="section" id="s3">
+  <p class="label">03 — The Method (Deep Dive)</p>
+  <h2>The Forgetting-Aware<br><em>Regularizer (FAR)</em></h2>
+  <p class="wide">FAL adds a pairwise ranking penalty on top of any base classification loss. The idea: pair every volatile sample against a more stable one, and penalize the model whenever it gives <em>more</em> confidence to the volatile sample.</p>
+
+  <div class="fblock reveal visible">
+    <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:20px">The Full FAL Objective</div>
+    <div class="fdisp">
+      <span class="fb">L(θ)</span> &nbsp;=&nbsp; <span class="fg">L<sub>base</sub>(θ)</span> &nbsp;+&nbsp; <span class="fr">λ</span> · <span class="fy">L<sup>pair</sup><sub>FAL</sub>(θ)</span>
+      <br><br>
+      <span class="fy">L<sup>pair</sup><sub>FAL</sub></span> = <span style="color:var(--dim)">1/|𝒫|</span> · Σ<sub>(i,j)∈𝒫</sub> &nbsp;<span class="fp">w<sub>ij</sub></span> · ℓ<sub>rank</sub>(&nbsp;<span class="fr">C<sub>i</sub></span>&nbsp;−&nbsp;<span class="fg">C<sub>j</sub></span>&nbsp;+&nbsp;<span class="fy">γ·|s<sub>i</sub>−s<sub>j</sub>|</span>&nbsp;)
+      <br><br>
+      <span style="color:var(--dim)">where &nbsp; 𝒫 = {(i,j) : k<sub>i</sub> &gt; k<sub>j</sub>} &nbsp;&nbsp; (more volatile sample paired with stable one)</span>
+      <br>
+      <span style="color:var(--dim)">and &nbsp; s<sub>i</sub> = 1 − k<sub>i</sub>/T &nbsp;&nbsp; (stability score, decreasing in forgetting count)</span>
+    </div>
+    <div class="fparts">
+      <div class="fpart">
+        <h5 style="color:var(--red)">C<sub>i</sub> − C<sub>j</sub> (Confidence Gap)</h5>
+        <p>The penalty activates when sample <em>i</em> (more volatile) has <em>higher</em> confidence than sample <em>j</em> (more stable). The optimizer is pushed to invert this ordering.</p>
+      </div>
+      <div class="fpart">
+        <h5 style="color:var(--yellow)">γ|s<sub>i</sub>−s<sub>j</sub>| (Stability Margin)</h5>
+        <p>The required confidence gap scales with how different the stability scores are. Large stability gap = require large confidence gap. This makes the constraint proportional to the actual uncertainty difference.</p>
+      </div>
+      <div class="fpart">
+        <h5 style="color:var(--purple)">w<sub>ij</sub> (Imbalance Weights)</h5>
+        <p>w<sub>ij</sub> ∝ π<sub>y</sub><sup>-β</sup> upweights minority-class pairs. Since minority examples are more often forgotten, this ensures their calibration is prioritized, not drowned out by majority pairs.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEEP DIVE: HOW THE PENALTY WORKS -->
+  <div class="deep-box reveal visible">
+    <div class="deep-box-hdr">
+      <span style="font-size:20px">🔬</span>
+      <h4>Deep Dive: How the Penalty Actually Works</h4>
+    </div>
+    <div class="deep-box-body">
+      <p style="max-width:none;font-size:14px">Let's trace through a concrete pairing with hinge loss ℓ<sub>rank</sub>(u) = max(0, u) to understand exactly what happens.</p>
+
+      <div class="pair-demo">
+        <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:18px">Scenario: Two samples at the same epoch</div>
+
+        <div class="pair-row">
+          <div class="pair-sample">
+            <h5 style="color:var(--red)">⚡ Sample i (Volatile)</h5>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted)">k<sub>i</sub> = 6 &nbsp;|&nbsp; s<sub>i</sub> = 0.40</div>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:13px;color:var(--red);margin-top:6px">Confidence C<sub>i</sub> = 0.92</div>
+          </div>
+          <div class="pair-arrow">vs</div>
+          <div class="pair-sample">
+            <h5 style="color:var(--green)">✓ Sample j (Stable)</h5>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted)">k<sub>j</sub> = 1 &nbsp;|&nbsp; s<sub>j</sub> = 0.90</div>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:13px;color:var(--green);margin-top:6px">Confidence C<sub>j</sub> = 0.78</div>
+          </div>
+          <div class="pair-verdict bad">
+            u = 0.92 − 0.78 + 0.3·|0.40−0.90|<br>
+            u = 0.14 + 0.15 = <strong>0.29 &gt; 0</strong><br>
+            Penalty: ℓ(0.29) = <strong>0.29</strong><br>
+            → VIOLATION: penalized!
+          </div>
+        </div>
+
+        <div class="pair-row" style="margin-top:8px">
+          <div class="pair-sample">
+            <h5 style="color:var(--red)">⚡ Sample i (Volatile)</h5>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted)">k<sub>i</sub> = 6 &nbsp;|&nbsp; s<sub>i</sub> = 0.40</div>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:13px;color:var(--yellow);margin-top:6px">Confidence C<sub>i</sub> = 0.45</div>
+          </div>
+          <div class="pair-arrow">vs</div>
+          <div class="pair-sample">
+            <h5 style="color:var(--green)">✓ Sample j (Stable)</h5>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted)">k<sub>j</sub> = 1 &nbsp;|&nbsp; s<sub>j</sub> = 0.90</div>
+            <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:13px;color:var(--green);margin-top:6px">Confidence C<sub>j</sub> = 0.85</div>
+          </div>
+          <div class="pair-verdict good">
+            u = 0.45 − 0.85 + 0.15 = <strong>−0.25 ≤ 0</strong><br>
+            Penalty: max(0, −0.25) = <strong>0</strong><br>
+            → CORRECT ORDER: no penalty
+          </div>
+        </div>
+      </div>
+
+      <div class="intuition" style="margin-top:20px">
+        <div class="iq">💡 The Isotonic Constraint</div>
+        <p>Over many epochs, the optimizer learns: "if this sample keeps being forgotten (k<sub>i</sub> is large), I should not give it high confidence." This enforces an <strong>isotonic relationship</strong> — confidence is monotonically non-increasing in forgetting count. Volatile samples get confidence caps; stable samples are freed to be confident.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE 5-STEP MECHANISM -->
+  <div class="flow reveal visible">
+    <div class="fstep">
+      <div class="fstep-num fn1">1</div>
+      <div class="fstep-body">
+        <h4>Track correctness at every epoch</h4>
+        <p>For each sample i in the training set, we record whether the model got it right at every single epoch t. This creates a binary time-series per sample.</p>
+        <span class="cpill">a<sup>t</sup><sub>i</sub> = 𝟙{ŷ<sup>t</sup><sub>i</sub> = y<sub>i</sub>}</span>
+        <div class="example" style="margin-top:12px">
+          <div class="ex-label">Example</div>
+          <p>Sample "blurry dog": [1,1,0,1,0,1,0,1,1,0,...] — correct at epoch 1, correct at 2, WRONG at 3 (a forgetting event!), correct at 4, WRONG at 5...</p>
+        </div>
+      </div>
+    </div>
+    <div class="fstep">
+      <div class="fstep-num fn2">2</div>
+      <div class="fstep-body">
+        <h4>Count the ✓→✗ transitions</h4>
+        <p>A forgetting event is <em>specifically</em> a transition from correct to incorrect. Not just any wrong prediction. This matters: an example that's wrong from the start is different from one that knows something, then loses it.</p>
+        <span class="cpill">k<sub>i</sub> = Σ<sub>t</sub> 𝟙{a<sup>t-1</sup><sub>i</sub>=1 ∧ a<sup>t</sup><sub>i</sub>=0}</span>
+        <div class="example" style="margin-top:12px">
+          <div class="ex-label">Insight from Toneva et al. 2018</div>
+          <p>High-k examples in CIFAR-10 are disproportionately: near the decision boundary, mislabeled, or visually ambiguous. The forgetting count is a natural filter for "samples the model hasn't truly learned."</p>
+        </div>
+      </div>
+    </div>
+    <div class="fstep">
+      <div class="fstep-num fn3">3</div>
+      <div class="fstep-body">
+        <h4>Convert to stability score s<sub>i</sub></h4>
+        <p>A stability score is just a monotone decreasing transformation of k<sub>i</sub>. The simplest: s<sub>i</sub> = 1 − k<sub>i</sub>/T. More forgetting → lower stability → this sample is a proxy for <em>epistemic uncertainty</em>.</p>
+        <span class="cpill">s<sub>i</sub> = ψ(k<sub>i</sub>) = 1 − k<sub>i</sub>/T</span>
+        <span class="gpill">ψ must be nonincreasing</span>
+      </div>
+    </div>
+    <div class="fstep">
+      <div class="fstep-num fn4">4</div>
+      <div class="fstep-body">
+        <h4>Build the pair set 𝒫</h4>
+        <p>For every pair (i, j) where sample i is more volatile than j (k<sub>i</sub> &gt; k<sub>j</sub>), we add that pair to 𝒫. The constraint we want to enforce: C<sub>i</sub> ≤ C<sub>j</sub>. More volatile = lower confidence.</p>
+        <span class="cpill">𝒫 = {(i,j) : k<sub>i</sub> &gt; k<sub>j</sub>}</span>
+        <div class="example" style="margin-top:12px;border-left-color:var(--red)">
+          <div class="ex-label" style="color:var(--red)">Scale consideration</div>
+          <p>With 50,000 training samples, the full pair set could have billions of pairs. In practice, FAL samples mini-batches of pairs efficiently — only within each training batch. The pairs are naturally distributed without any special sampling.</p>
+        </div>
+      </div>
+    </div>
+    <div class="fstep" style="padding-bottom:0">
+      <div class="fstep-num fn5">5</div>
+      <div class="fstep-body">
+        <h4>Apply the ranking penalty</h4>
+        <p>For each violating pair (volatile i has higher confidence than stable j), apply a hinge or logistic penalty. The total regularizer adds to the base classification loss with weight λ.</p>
+        <span class="cpill">ℓ<sub>rank</sub>(u) = max(0, u)</span>
+        <span class="cpill" style="background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.2);color:var(--purple)">or log(1 + e<sup>u</sup>) logistic</span>
+        <div class="intuition" style="margin-top:16px">
+          <div class="iq">💡 What the Optimizer Does</div>
+          <p>The optimizer has two levers to reduce the FAL penalty: (1) decrease confidence on volatile sample i, or (2) increase confidence on stable sample j. Both are desirable! Volatile samples get capped; stable samples are encouraged to be confident. This simultaneously compresses overconfident errors <em>and</em> boosts legitimate high-confidence predictions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Lambda Demo -->
+  <div class="slider-demo reveal visible">
+    <div style="font-family:&#39;DM Mono&#39;,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:24px">Interactive: Effect of λ (regularization strength)</div>
+    <div class="srow">
+      <div class="slbl">λ (FAL strength)<small>How hard we penalize volatility-overconfidence</small></div>
+      <div>
+        <input type="range" id="lam" min="0" max="10" value="0" step="0.5">
+        <span style="font-family:&#39;DM Mono&#39;,monospace;font-size:12px;color:var(--blue);margin-left:10px" id="lamval">λ = 0.0</span>
+      </div>
+    </div>
+    <div class="barviz" id="bv"><div class="bvi"><div class="bv-val" style="color: rgb(61, 232, 176);">92%</div><div class="bv-cont"><div class="bv-fill" style="background: rgba(61, 232, 176, 0.19); border-top: 2px solid rgb(61, 232, 176); height: 92%;"></div></div><div class="bv-lbl">k=0
+Clean</div></div><div class="bvi"><div class="bv-val" style="color: rgb(61, 232, 176);">87%</div><div class="bv-cont"><div class="bv-fill" style="background: rgba(61, 232, 176, 0.19); border-top: 2px solid rgb(61, 232, 176); height: 87%;"></div></div><div class="bv-lbl">k=1
+Stable</div></div><div class="bvi"><div class="bv-val" style="color: rgb(245, 200, 66);">84%</div><div class="bv-cont"><div class="bv-fill" style="background: rgba(245, 200, 66, 0.19); border-top: 2px solid rgb(245, 200, 66); height: 84%;"></div></div><div class="bv-lbl">k=2
+Medium</div></div><div class="bvi"><div class="bv-val" style="color: rgb(245, 200, 66);">88%</div><div class="bv-cont"><div class="bv-fill" style="background: rgba(245, 200, 66, 0.19); border-top: 2px solid rgb(245, 200, 66); height: 88%;"></div></div><div class="bv-lbl">k=4
+Medium</div></div><div class="bvi"><div class="bv-val" style="color: rgb(251, 146, 60);">91%</div><div class="bv-cont"><div class="bv-fill" style="background: rgba(251, 146, 60, 0.19); border-top: 2px solid rgb(251, 146, 60); height: 91%;"></div></div><div class="bv-lbl">k=6
+Volatile</div></div><div class="bvi"><div class="bv-val" style="color: rgb(255, 107, 107);">95%</div><div class="bv-cont"><div class="bv-fill" style="background: rgba(255, 107, 107, 0.19); border-top: 2px solid rgb(255, 107, 107); height: 95%;"></div></div><div class="bv-lbl">k=8
+Volatile</div></div><div class="bvi"><div class="bv-val" style="color: rgb(255, 107, 107);">97%</div><div class="bv-cont"><div class="bv-fill" style="background: rgba(255, 107, 107, 0.19); border-top: 2px solid rgb(255, 107, 107); height: 97%;"></div></div><div class="bv-lbl">k=10
+Extreme</div></div></div>
+    <p style="font-size:12px;color:var(--dim);margin-top:12px;max-width:none">Volatile samples (high k) have sensitivity 3-5× higher than stable ones. Correct ordering is enforced, not uniform confidence squashing.</p>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- ══════════════════════════════════════
+     04 — CAL + FAL SYNERGY
+══════════════════════════════════════ -->
+<section class="section" id="s4">
+  <p class="label">04 — The Synergy</p>
+  <h2>CAL + FAL:<br>A <em>Two-Axis Filter</em></h2>
+  <p class="wide">FAL alone is powerful but incomplete. Combined with Confidence-Aware Learning (CAL), which tracks average correctness frequency, the pair catches two completely different failure modes of overconfidence — like having both a smoke alarm and a carbon monoxide detector.</p>
+
+  <!-- WHAT EACH SIGNAL CAPTURES -->
+  <div class="two-col reveal visible">
+    <div class="signal-card sc-cal">
+      <span class="tag tblue">CAL · Correctness Ranking Loss</span>
+      <h4>Signal: Average Correctness History</h4>
+      <p style="max-width:none;font-size:13.5px">CAL tracks the fraction of training epochs each sample was correctly classified: c<sup>corr</sup><sub>i</sub> ∈ [0,1]. If sample i is correct 80% of the time and sample j is correct 40% of the time, CAL says: <em>"C<sub>i</sub> should be higher than C<sub>j</sub>."</em></p>
+      <div class="mono-box">
+        <span class="h">What it catches:</span> Persistently hard examples<br>
+        Examples that are wrong <em>often</em><br>
+        Low c<sup>corr</sup> → cap their confidence<br><br>
+        <span class="h">What it misses:</span> Alternating patterns<br>
+        Two samples with same c<sup>corr</sup> but<br>
+        very different volatility dynamics
+      </div>
+    </div>
+    <div class="signal-card sc-fal">
+      <span class="tag tgreen">FAL · Forgetting-Aware Regularizer</span>
+      <h4>Signal: Temporal Volatility</h4>
+      <p style="max-width:none;font-size:13.5px">FAL tracks the number of ✓→✗ transitions during training: k<sub>i</sub>. Even if two samples have identical average correctness, FAL distinguishes the one that alternates constantly from the one with clustered errors.</p>
+      <div class="mono-box">
+        <span class="h">What it catches:</span> Alternating samples<br>
+        High forgetting count even when<br>
+        average correctness looks OK<br><br>
+        <span class="h">What it misses alone:</span> Nothing CAL adds —<br>
+        But combined, they cover the<br>
+        full space of overconfidence failures
+      </div>
+    </div>
+  </div>
+
+  <!-- VENN DIAGRAM SVG -->
+  <div class="venn-wrap reveal visible">
+    <svg class="venn-svg" viewBox="0 0 540 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- CAL circle -->
+      <circle cx="190" cy="130" r="110" fill="rgba(91,140,255,.08)" stroke="rgba(91,140,255,.3)" stroke-width="1.5"></circle>
+      <!-- FAL circle -->
+      <circle cx="350" cy="130" r="110" fill="rgba(61,232,176,.08)" stroke="rgba(61,232,176,.3)" stroke-width="1.5"></circle>
+      <!-- Overlap -->
+      <clippath id="calClip"><circle cx="190" cy="130" r="110"></circle></clippath>
+      <circle cx="350" cy="130" r="110" fill="rgba(91,140,255,.12)" clip-path="url(#calClip)"></circle>
+      <!-- Labels -->
+      <text x="130" y="110" fill="#5b8cff" font-family="DM Mono,monospace" font-size="13" font-weight="500">CAL / CRL</text>
+      <text x="98" y="130" fill="#7a82a2" font-family="Plus Jakarta Sans,sans-serif" font-size="11">Persistently wrong</text>
+      <text x="110" y="148" fill="#7a82a2" font-family="Plus Jakarta Sans,sans-serif" font-size="11">low avg correctness</text>
+      <text x="384" y="110" fill="#3de8b0" font-family="DM Mono,monospace" font-size="13" font-weight="500">FAL</text>
+      <text x="368" y="130" fill="#7a82a2" font-family="Plus Jakarta Sans,sans-serif" font-size="11">Volatile alternating</text>
+      <text x="368" y="148" fill="#7a82a2" font-family="Plus Jakarta Sans,sans-serif" font-size="11">high forgetting count</text></svg></div>
+      <text x="233" y="118" fill="#dde2f0" font-family="Plus Jakarta Sans,sans-serif" font-size="11" font-weight="600">Both</text>
+      <text x="228" y="134" fill="#7a82a2" font-family="Plus Jakarta Sans,sans-serif" font-size="10">hard AND</text>
+      <text x="228" y="149" fill="#7a82a2" font-family="Plus Jakarta Sans,sans-serif" font-size="10">volatile</text>
+      <!-- ECE arrow -->
+      <text x="220" y="230" fill="#dde2f0" font-family="Fraunces,serif" font-size="16" text-anchor="middle">↓ ECE &nbsp; ↓ AURC &nbsp; ✓ Accuracy preserved</text>
+    
+  
+
+  <!-- SCENARIO TABLE: The 4 quadrants -->
+  <h3 class="reveal visible" style="margin-top:48px">The Four Scenarios</h3>
+  <p class="reveal visible">Understanding when each signal fires helps build intuition for why combining them is so effective.</p>
+
+  <div class="scenario-grid reveal visible">
+    <div class="scen-cell hdr">Scenario</div>
+    <div class="scen-cell hdr">c<sup>corr</sup> (avg correctness)</div>
+    <div class="scen-cell hdr">k (forgetting count)</div>
+    <div class="scen-cell hdr">Who penalizes?</div>
+
+    <div class="scen-cell good-cell">
+      <div class="cv" style="color:var(--green)">Truly Easy</div>
+      <p>Cat photo, correct lighting, clear label</p>
+    </div>
+    <div class="scen-cell good-cell"><p style="color:var(--green)">High (0.9+)</p></div>
+    <div class="scen-cell good-cell"><p style="color:var(--green)">Low (0–1)</p></div>
+    <div class="scen-cell good-cell"><p>Neither. High confidence is deserved and preserved.</p></div>
+
+    <div class="scen-cell warn-cell">
+      <div class="cv" style="color:var(--yellow)">Consistently Difficult</div>
+      <p>Noisy label, rare class, always near boundary</p>
+    </div>
+    <div class="scen-cell warn-cell"><p style="color:var(--yellow)">Low (0.4−)</p></div>
+    <div class="scen-cell warn-cell"><p style="color:var(--yellow)">Moderate (few transitions)</p></div>
+    <div class="scen-cell warn-cell"><p><strong>CAL fires</strong>: low c<sup>corr</sup> means it's often wrong — cap its confidence.</p></div>
+
+    <div class="scen-cell warn-cell">
+      <div class="cv" style="color:var(--orange)">Deceptively Volatile</div>
+      <p>Average correctness looks OK (70%) but alternates constantly</p>
+    </div>
+    <div class="scen-cell warn-cell"><p style="color:var(--yellow)">Medium (0.6−0.75)</p></div>
+    <div class="scen-cell warn-cell"><p style="color:var(--red)">High (5+ transitions)</p></div>
+    <div class="scen-cell warn-cell"><p><strong>FAL fires</strong>: CAL would miss this. FAL catches it via high k<sub>i</sub>.</p></div>
+
+    <div class="scen-cell bad-cell">
+      <div class="cv" style="color:var(--red)">Worst Case</div>
+      <p>Mislabeled + near boundary. Wrong most of the time AND alternating</p>
+    </div>
+    <div class="scen-cell bad-cell"><p style="color:var(--red)">Low (0.3−)</p></div>
+    <div class="scen-cell bad-cell"><p style="color:var(--red)">Very High (8+)</p></div>
+    <div class="scen-cell bad-cell"><p><strong>Both fire</strong>. Maximum penalty. Confidence crushed toward uncertainty.</p></div>
+  </div>
+
+  <!-- Combined result -->
+  <div class="joint-card reveal visible">
+    <h3>CAL + FAL = Self-Aware Model</h3>
+    <p style="max-width:560px;margin:0 auto 28px;color:var(--muted);font-size:14px">The two regularizers perform a <em>lexicographic refinement</em>: first rank by correctness history (CAL), then break ties by stability (FAL). Together they eliminate more sources of overconfident errors than either alone.</p>
+    <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="font-family:&#39;Fraunces&#39;,serif;font-size:38px;color:var(--red)">19.24</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px">ECE — CE Baseline</div>
+      </div>
+      <div style="text-align:center;display:flex;align-items:center;font-size:22px;color:var(--dim)">→</div>
+      <div style="text-align:center">
+        <div style="font-family:&#39;Fraunces&#39;,serif;font-size:38px;color:var(--yellow)">11.57</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px">ECE — CE + CAL</div>
+      </div>
+      <div style="text-align:center;display:flex;align-items:center;font-size:22px;color:var(--dim)">+</div>
+      <div style="text-align:center">
+        <div style="font-family:&#39;Fraunces&#39;,serif;font-size:38px;color:var(--yellow)">15.62</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px">ECE — CE + FAL</div>
+      </div>
+      <div style="text-align:center;display:flex;align-items:center;font-size:22px;color:var(--dim)">→</div>
+      <div style="text-align:center">
+        <div style="font-family:&#39;Fraunces&#39;,serif;font-size:38px;color:var(--green)">9.41</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px">ECE — CE+CAL+FAL ★</div>
+      </div>
+      <div style="text-align:center;display:flex;align-items:center;font-size:22px;color:var(--dim)">→</div>
+      <div style="text-align:center">
+        <div style="font-family:&#39;Fraunces&#39;,serif;font-size:38px;background:linear-gradient(135deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">3.60</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px">ECE — FL+CAL+FAL ★★</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--dim);margin-top:16px">CIFAR-100, VGG-16, 300 epochs. Lower ECE = better calibration.</div>
+  </div>
+
+  <!-- What happens to confidence distribution -->
+  <div class="deep-box reveal visible" style="margin-top:36px">
+    <div class="deep-box-hdr">
+      <span style="font-size:20px">📊</span>
+      <h4>What Actually Changes: The Asymmetric Confidence Shift</h4>
+    </div>
+    <div class="deep-box-body">
+      <p style="max-width:none;font-size:14px">The most important empirical finding is not that FAL+CAL makes the model universally less confident. It's that it makes the model <em>selectively</em> less confident — on exactly the samples it's likely to be wrong about.</p>
+      <div class="card-grid-3" style="margin-top:20px">
+        <div class="card" style="border-color:rgba(61,232,176,.2);background:rgba(61,232,176,.03)">
+          <h4 style="color:var(--green)">Correctly Classified Samples</h4>
+          <div style="font-family:&#39;Fraunces&#39;,serif;font-size:32px;color:var(--green);margin:8px 0">↓ tiny</div>
+          <p style="max-width:none;font-size:13px">Mean confidence on correct predictions decreases only slightly. The model remains confident when it should be. This is critical — we don't want a uniformly uncertain model.</p>
+        </div>
+        <div class="card" style="border-color:rgba(255,107,107,.2);background:rgba(255,107,107,.03)">
+          <h4 style="color:var(--red)">Incorrectly Classified Samples</h4>
+          <div style="font-family:&#39;Fraunces&#39;,serif;font-size:32px;color:var(--red);margin:8px 0">↓↓ large</div>
+          <p style="max-width:none;font-size:13px">Mean confidence on <em>wrong</em> predictions drops dramatically. High-confidence mistakes — the primary driver of ECE — are pushed down to lower, more honest confidence levels.</p>
+        </div>
+        <div class="card" style="border-color:rgba(245,200,66,.2);background:rgba(245,200,66,.03)">
+          <h4 style="color:var(--yellow)">Top 10% Most-Forgotten Samples</h4>
+          <div style="font-family:&#39;Fraunces&#39;,serif;font-size:32px;color:var(--yellow);margin:8px 0">↓↓↓ largest</div>
+          <p style="max-width:none;font-size:13px">The effect is <em>most pronounced</em> on the most volatile samples — exactly where FAL is designed to act. CE assigns ~99.99% confidence to these; FAL+CAL drops it to ~86%.</p>
+        </div>
+      </div>
+      <div class="intuition" style="margin-top:20px">
+        <div class="iq">💡 Why This Improves ECE</div>
+        <p>ECE is dominated by high-confidence errors — they sit in the highest confidence bins but are wrong, creating a massive gap between bin confidence and bin accuracy. FAL+CAL directly targets these: by pushing volatile samples to lower confidence bins, it moves the most damaging errors out of the high-confidence region. The bin-wise accuracy–confidence gap shrinks, and ECE falls.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Focal Loss integration -->
+  <div class="deep-box reveal visible" style="margin-top:24px">
+    <div class="deep-box-hdr">
+      <span style="font-size:20px">🔥</span>
+      <h4>Why Focal Loss + CAL + FAL is the Strongest Combination</h4>
+    </div>
+    <div class="deep-box-body">
+      <p style="max-width:none;font-size:14px">Each component addresses a different failure mode — they're truly orthogonal.</p>
+      <div class="card-grid-3" style="margin-top:16px">
+        <div class="card">
+          <span class="tag tred">Focal Loss</span>
+          <h4>Controls <em>What Gets Learned</em></h4>
+          <p style="max-width:none;font-size:13px">Downweights easy examples via (1−p)<sup>γ</sup>. Redirects gradient budget toward hard/ambiguous samples. Fixes class imbalance issues. But does not constrain <em>how confident</em> the model is on any sample.</p>
+        </div>
+        <div class="card">
+          <span class="tag tblue">CAL / CRL</span>
+          <h4>Controls <em>Correctness Ranking</em></h4>
+          <p style="max-width:none;font-size:13px">Enforces a global ordinal constraint: sample with higher correctness history gets higher confidence. Doesn't reallocate gradients. Pure confidence landscape reshaping by mean correctness.</p>
+        </div>
+        <div class="card">
+          <span class="tag tgreen">FAL</span>
+          <h4>Controls <em>Stability Discounting</em></h4>
+          <p style="max-width:none;font-size:13px">Enforces isotonicity of confidence in forgetting count. Catches alternation-heavy samples that FL and CAL miss. Acts as a second orthogonal axis on the confidence landscape.</p>
+        </div>
+      </div>
+      <div class="example" style="margin-top:20px;border-left-color:var(--purple)">
+        <div class="ex-label" style="color:var(--purple)">📐 Analogy: Three different quality controls on a factory line</div>
+        <p>Focal Loss is like <em>directing the workers</em> to spend more time on defective units. CAL is like a <em>quality inspector</em> who marks items as "low confidence" if they've failed inspection many times in the past. FAL is like a <em>stability auditor</em> who marks items as uncertain if they keep passing on Monday but failing on Friday — even if their average pass rate is OK. Together: near-zero defective units leave the factory with a "high confidence" stamp.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- ══════════════════════════════════════
+     05 — FRAUD DETECTION USE-CASE
+══════════════════════════════════════ -->
+<section class="section" id="s5">
+  <p class="label">05 — Why This Matters in Practice</p>
+  <h2>Calibration in<br><em>Fraud Detection</em></h2>
+  <p class="wide">Abstract calibration metrics like ECE become very concrete when you're operating a fraud scoring system where every "confidence" number drives a real business decision affecting real customers.</p>
+
+  <div class="fraud-hero reveal visible">
+    <div style="font-size:11px;font-family:&#39;DM Mono&#39;,monospace;text-transform:uppercase;letter-spacing:.12em;color:var(--red);margin-bottom:12px">The Stakes</div>
+    <h3>A fraud model that says "95% this is fraud" when it's actually only 60% likely to be fraud isn't just inaccurate — it's a liability.</h3>
+    <p style="max-width:800px;color:var(--muted);font-size:14px;margin-top:14px;max-width:none">Fraud detection systems make thousands of decisions per second: block a transaction, flag for review, or let it through. Every decision is weighted by the model's confidence score. If those scores don't reflect reality, the entire risk management framework is built on sand.</p>
+  </div>
+
+  <!-- The decision cascade -->
+  <h3 class="reveal visible" style="margin-top:44px">The Confidence-to-Decision Cascade</h3>
+  <p class="reveal visible">Here's how a fraud model's confidence score flows into real business operations — and where miscalibration creates compounding problems.</p>
+
+  <div class="fraud-timeline reveal visible">
+    <div class="ftl-item">
+      <div class="ftl-icon" style="background:rgba(91,140,255,.15);border:1px solid rgba(91,140,255,.25)">🎯</div>
+      <div>
+        <h4>Step 1: Transaction Scoring</h4>
+        <p style="max-width:none;font-size:14px">A transaction arrives. The model outputs: <span style="font-family:&#39;DM Mono&#39;,monospace;color:var(--blue)">fraud_probability = 0.87</span>. This single number determines everything downstream.</p>
+        <div class="fraud-scenario">
+          <div class="conf-badge cbad">87% fraud</div>
+          <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:6px">₹14,000 online purchase, new device, unusual hour</div>
+          <div style="font-size:12.5px;color:var(--muted)">Model: "87% confidence this is fraud" — but is that number honest?</div>
+        </div>
+      </div>
+    </div>
+    <div class="ftl-item">
+      <div class="ftl-icon" style="background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.25)">⚖️</div>
+      <div>
+        <h4>Step 2: Threshold-Based Routing</h4>
+        <p style="max-width:none;font-size:14px">Risk teams set thresholds based on confidence scores. A miscalibrated model forces these thresholds to be set incorrectly — you're calibrating business rules to wrong numbers.</p>
+        <div class="threshold-demo">
+          <div style="font-size:12px;font-family:&#39;DM Mono&#39;,monospace;color:var(--muted);margin-bottom:8px">TRANSACTION ROUTING RULES</div>
+          <div class="threshold-bar">
+            <div class="tb-good-zone" style="width:50%"></div>
+            <div class="tb-thresh" style="left:50%"></div>
+            <div class="tb-thresh" style="left:80%;border-color:var(--red)"></div>
+            <div class="tb-bad-zone" style="left:80%;right:0"></div>
+            <div class="tb-dot" style="left:35%;background:var(--green)" title="safe"></div>
+            <div class="tb-dot" style="left:62%;background:var(--yellow)" title="review"></div>
+            <div class="tb-dot" style="left:87%;background:var(--red)" title="blocked"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:&#39;DM Mono&#39;,monospace;font-size:10px;color:var(--dim)">
+            <span>0.0 — AUTO APPROVE</span>
+            <span>0.5 — MANUAL REVIEW</span>
+            <span>0.8 — AUTO BLOCK</span>
+            <span>1.0</span>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin-top:10px;max-width:none">If model says 0.87 when true probability is 0.55 → the transaction gets auto-blocked when it should have gone to review. A legitimate customer is declined.</p>
+        </div>
+      </div>
+    </div>
+    <div class="ftl-item">
+      <div class="ftl-icon" style="background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.25)">💸</div>
+      <div>
+        <h4>Step 3: The Cost of Miscalibration</h4>
+        <p style="max-width:none;font-size:14px">Both types of calibration errors have direct financial costs — and calibration affects <em>which</em> error type is more common at each threshold.</p>
+        <div class="cost-grid">
+          <div class="cost-card">
+            <div class="cost-num" style="color:var(--red)">False Block</div>
+            <p>Legitimate transaction blocked because model is overconfident about fraud. Customer frustrated, potential churn. Average cost: ₹1,200–5,000 in lifetime value loss per incident.</p>
+            <div style="font-size:11px;color:var(--muted);font-family:&#39;DM Mono&#39;,monospace;margin-top:8px">Caused by: overconfident fraud scores on legitimate-looking transactions</div>
+          </div>
+          <div class="cost-card">
+            <div class="cost-num" style="color:var(--orange)">False Pass</div>
+            <p>Fraudulent transaction approved because model underestimates fraud probability. Direct financial loss + chargeback fees. Average cost: ₹8,000–50,000+ per fraud event.</p>
+            <div style="font-size:11px;color:var(--muted);font-family:&#39;DM Mono&#39;,monospace;margin-top:8px">Caused by: underconfident fraud scores on volatile/emerging fraud patterns</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ftl-item">
+      <div class="ftl-icon" style="background:rgba(61,232,176,.15);border:1px solid rgba(61,232,176,.25)">📈</div>
+      <div>
+        <h4>Step 4: Why Better Calibration Directly Helps</h4>
+        <p style="max-width:none;font-size:14px">A well-calibrated fraud model doesn't just have better ECE — it enables better business outcomes at every operational point.</p>
+        <div class="card-grid-2" style="margin-top:16px">
+          <div class="card" style="border-color:rgba(61,232,176,.2)">
+            <h4>Honest Thresholds</h4>
+            <p style="max-width:none;font-size:13px">When the model's 80% score genuinely means 80% fraud probability, you can set thresholds based on actual cost/benefit trade-offs instead of guessing where to put them to "correct" for the model's overconfidence.</p>
+          </div>
+          <div class="card" style="border-color:rgba(61,232,176,.2)">
+            <h4>Better Review Queue</h4>
+            <p style="max-width:none;font-size:13px">Manual review queues should contain the cases where the model is genuinely uncertain (50–70% confidence). A miscalibrated model floods the queue with high-confidence cases that don't need review — wasting analyst time.</p>
+          </div>
+          <div class="card" style="border-color:rgba(61,232,176,.2)">
+            <h4>Volatility = New Fraud Pattern</h4>
+            <p style="max-width:none;font-size:13px">Forgetting events in a fraud model often correspond to <em>evolving fraud tactics</em>. A transaction pattern that the model keeps getting right then wrong is likely at the boundary of a new fraud type. FAL's stability signal is a natural alarm for emerging fraud.</p>
+          </div>
+          <div class="card" style="border-color:rgba(61,232,green,.2)">
+            <h4>Customer Trust</h4>
+            <p style="max-width:none;font-size:13px">When customers see why a transaction was flagged (model was "uncertain, not certain"), they trust the explanation. "We blocked it because we weren't sure" is acceptable. "We were 99% sure it was fraud" when it wasn't — destroys trust.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Concrete ECE Impact -->
+  <div class="ece-impact reveal visible">
+    <div class="ece-box">
+      <div class="ece-num" style="color:var(--red)">19%</div>
+      <div class="ece-label">ECE — Baseline CE<br>Overconfident on ~19% of score buckets</div>
+    </div>
+    <div class="ece-box">
+      <div class="ece-num" style="color:var(--yellow)">9.4%</div>
+      <div class="ece-label">ECE — CE + CAL + FAL<br>51% reduction in calibration error</div>
+    </div>
+    <div class="ece-box">
+      <div class="ece-num" style="color:var(--green)">3.6%</div>
+      <div class="ece-label">ECE — FL + CAL + FAL<br>81% reduction. Near-perfect calibration.</div>
+    </div>
+  </div>
+
+  <!-- Trust meter -->
+  <div class="trust-meter reveal visible">
+    <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:6px">Model Trustworthiness for Fraud Decision Systems</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Composite: calibration quality + ordinal ranking + accuracy preservation</div>
+
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted);margin-bottom:6px">
+        <span>Baseline CE</span><span style="color:var(--red)">35%</span>
+      </div>
+      <div class="tm-bar"><div class="tm-fill" id="tm1" style="width:35%;background:var(--red)"></div></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted);margin-bottom:6px">
+        <span>CE + CAL</span><span style="color:var(--yellow)">62%</span>
+      </div>
+      <div class="tm-bar"><div class="tm-fill" id="tm2" style="width:62%;background:var(--yellow)"></div></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted);margin-bottom:6px">
+        <span>CE + CAL + FAL</span><span style="color:var(--green)">81%</span>
+      </div>
+      <div class="tm-bar"><div class="tm-fill" id="tm3" style="width:81%;background:var(--green)"></div></div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;font-family:&#39;DM Mono&#39;,monospace;font-size:11px;color:var(--muted);margin-bottom:6px">
+        <span>FL + CAL + FAL</span><span style="color:var(--blue)">94%</span>
+      </div>
+      <div class="tm-bar"><div class="tm-fill" id="tm4" style="width:94%;background:linear-gradient(90deg,var(--blue),var(--green))">FL + CAL + FAL</div></div>
+    </div>
+    <p style="font-size:11px;color:var(--dim);margin-top:12px;max-width:none">* Illustrative composite score based on ECE, AURC, and NLL improvements from paper. Baseline = normalized to 100% as maximum achievable.</p>
+  </div>
+
+  <div class="example reveal visible" style="border-left-color:var(--green);margin-top:32px">
+    <div class="ex-label" style="color:var(--green)">🏦 Connecting Back to FAL's Stability Signal</div>
+    <p>In fraud detection specifically, <em>forgetting events correspond to evolving fraud patterns</em>. A transaction that the model gets right in January (legit) but wrong in March (now looks like a new fraud pattern) and right again in May — that's a forgetting event. These are exactly the transactions at the frontier of fraud evolution. FAL's stability-aware confidence means: on these uncertain frontier transactions, the model will say "I'm about 55% sure" rather than "99% sure." That honest uncertainty is <strong>what enables the right downstream action</strong>: route to expert review, not auto-block or auto-pass.</p>
+  </div>
+</section>
+
+<hr class="div">
+
+<!-- ══════════════════════════════════════
+     06 — RESULTS
+══════════════════════════════════════ -->
+<section class="section" id="s6">
+  <p class="label">06 — Empirical Results</p>
+  <h2>Where does it <em>work best?</em></h2>
+  <p class="wide">FAL provides consistent improvements across five image benchmarks, two architectures, and tabular datasets — with the most dramatic gains on harder, higher-cardinality tasks.</p>
+
+  <div class="rtable-wrap reveal visible">
+    <div class="rt-hdr">
+      <h4>CIFAR-100 · VGG-16 · 300 epochs</h4>
+      <span class="tag tgreen">★ = Best in column</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Method</th><th>Accuracy ↑</th><th>AURC ↓</th><th>ECE ↓</th><th>NLL ↓</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>Baseline (CE)</td><td>74.04</td><td>76.56</td><td>19.24</td><td>17.42</td></tr>
+        <tr><td>CE + CAL (CRL)</td><td>74.64</td><td>69.31</td><td>11.57</td><td>12.29</td></tr>
+        <tr><td>CE + FAL only</td><td>74.04</td><td>73.79</td><td>15.62</td><td>13.67</td></tr>
+        <tr class="hl"><td><strong>CE + CAL + FAL</strong></td><td class="bv">74.78</td><td class="bv">68.74</td><td class="bv">9.41</td><td class="bv">11.75</td></tr>
+        <tr><td>Baseline (FL)</td><td>73.46</td><td>80.71</td><td>15.01</td><td>13.05</td></tr>
+        <tr class="hl"><td><strong>FL + CAL + FAL</strong></td><td>73.94</td><td>75.86</td><td class="bv" style="color:var(--blue)">3.60</td><td class="bv" style="color:var(--blue)">10.76</td></tr>
+        <tr style="background:rgba(167,139,250,.04)"><td>CE + Label Smoothing</td><td>73.69</td><td>136.75 ⚠️</td><td>7.86</td><td>13.22</td></tr>
+        <tr style="background:rgba(167,139,250,.04)"><td>CE + Confidence Penalty</td><td>74.01</td><td>75.16</td><td>18.16</td><td>15.64</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="intuition reveal visible" style="margin-top:28px">
+    <div class="iq">⚠️ Important Note on Label Smoothing</div>
+    <p>Label Smoothing achieves 7.86 ECE — better than CE+CAL+FAL's 9.41 — but at a severe cost: AURC jumps to 136.75 from 76.56 (baseline). This means label smoothing <em>destroys ordinal confidence ranking</em> while improving raw calibration. In a fraud detection context, you'd lose the ability to rank transactions by risk. CE+CAL+FAL achieves <em>both</em>: better ECE <em>and</em> best AURC (68.74). The trade-off matters enormously in practice.</p>
+  </div>
+
+  <div class="card-grid-4 reveal visible" style="margin-top:36px">
+    <div class="card">
+      <span class="tag tgreen">Key Finding 1</span>
+      <h4>~51% ECE reduction</h4>
+      <p style="max-width:none;font-size:13px">CE+CAL+FAL cuts ECE from 19.24 to 9.41 on CIFAR-100. FL+CAL+FAL achieves 3.60 — an 81% reduction.</p>
+    </div>
+    <div class="card">
+      <span class="tag tgreen">Key Finding 2</span>
+      <h4>Noise robustness</h4>
+      <p style="max-width:none;font-size:13px">Under 5–30% structured label noise, CAL+FAL shows the smallest degradation in both accuracy and AURC. Forgetting events become even more informative under corruption.</p>
+    </div>
+    <div class="card">
+      <span class="tag tgreen">Key Finding 3</span>
+      <h4>Accuracy preserved</h4>
+      <p style="max-width:none;font-size:13px">Accuracy remains within ±0.3% of baseline across all settings. FAL is a confidence regularizer, not an accuracy regularizer — the two are decoupled.</p>
+    </div>
+    <div class="card">
+      <span class="tag tgreen">Key Finding 4</span>
+      <h4>Confirmed by audit</h4>
+      <p style="max-width:none;font-size:13px">Spearman ρ = 0.81 between FAL penalty and forgetting count k<sub>i</sub>. ρ = −0.78 with AUM. The penalty goes to exactly the right samples.</p>
+    </div>
+  </div>
+
+  <!-- Final Principle -->
+  <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:24px;padding:44px;margin-top:48px;text-align:center" class="reveal visible">
+    <div style="font-size:11px;font-family:&#39;DM Mono&#39;,monospace;text-transform:uppercase;letter-spacing:.18em;color:var(--blue);margin-bottom:20px">The Core Principle</div>
+    <h2 style="font-size:clamp(28px,5vw,52px);margin-bottom:20px">Confidence should be <em>earned</em><br>by stable learning</h2>
+    <p style="max-width:640px;margin:0 auto;font-size:15px;color:var(--muted)">If a model keeps forgetting something — keeps alternating between getting it right and wrong — it hasn't truly learned it. And if it hasn't truly learned it, it has no business being 99% confident about it.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:32px;max-width:700px;margin-left:auto;margin-right:auto">
+      <div style="text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">📊</div>
+        <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:4px">Focal Loss</div>
+        <div style="font-size:11px;color:var(--muted)">What to learn</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">📅</div>
+        <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:4px">CAL</div>
+        <div style="font-size:11px;color:var(--muted)">How often correct</div>
+      </div>
+      <div style="text-align:center;background:var(--gblue);border-radius:12px;padding:12px">
+        <div style="font-size:28px;margin-bottom:8px">⚡</div>
+        <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:4px">FAL</div>
+        <div style="font-size:11px;color:var(--muted)">How stably learned</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="background:var(--s1);border-top:1px solid var(--bdr);padding:44px 24px;text-align:center">
+  <p style="max-width:none;font-size:13px;color:var(--muted)"><strong style="color:var(--txt)">Learning to Doubt: Forgetting Aware Learning for Neural Networks</strong></p>
+  <p style="max-width:none;font-size:11px;font-family:&#39;DM Mono&#39;,monospace;color:var(--dim);margin-top:8px">Interactive visual explainer · Calibration foundations from Guo et al. 2017, Minderer et al. 2021</p>
+</footer>
+
+<script>
+// ── EPOCH TRACKS ──
+const td = {
+  A: [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  B: [1,1,0,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,1],
+  C: [1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,1,0,1,1,0],
+  D: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,0,1,0,0]
+};
+
+function buildTrack(id, data) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  data.forEach((v, t) => {
+    const prev = data[t-1];
+    const isFE = t > 0 && prev === 1 && v === 0;
+    const d = document.createElement('div');
+    d.className = `dot ${isFE ? 'fe' : (v ? 'ok' : 'no')}`;
+    d.title = `Epoch ${t+1}: ${v ? '✓ Correct' : '✗ Wrong'}${isFE ? ' ⚡ FORGETTING EVENT' : ''}`;
+    d.textContent = isFE ? '⚡' : (v ? '✓' : '✗');
+    c.appendChild(d);
+  });
+}
+['A','B','C','D'].forEach(k => buildTrack('t'+k, td[k]));
+
+// ── SLIDER ──
+const samps = [
+  { l: 'k=0\nClean', base:.92, sens:.008, col:'#3de8b0' },
+  { l: 'k=1\nStable', base:.87, sens:.015, col:'#3de8b0' },
+  { l: 'k=2\nMedium', base:.84, sens:.04,  col:'#f5c842' },
+  { l: 'k=4\nMedium', base:.88, sens:.07,  col:'#f5c842' },
+  { l: 'k=6\nVolatile', base:.91, sens:.12, col:'#fb923c' },
+  { l: 'k=8\nVolatile', base:.95, sens:.16, col:'#ff6b6b' },
+  { l: 'k=10\nExtreme', base:.97, sens:.20, col:'#ff6b6b' },
+];
+const bv = document.getElementById('bv');
+const items = samps.map(s => {
+  const item = document.createElement('div'); item.className = 'bvi';
+  const val = document.createElement('div'); val.className = 'bv-val'; val.style.color = s.col;
+  val.textContent = Math.round(s.base*100)+'%';
+  const cont = document.createElement('div'); cont.className = 'bv-cont';
+  const fill = document.createElement('div'); fill.className = 'bv-fill';
+  fill.style.cssText = `background:${s.col}30;border-top:2px solid ${s.col};height:${s.base*100}%`;
+  const lbl = document.createElement('div'); lbl.className = 'bv-lbl'; lbl.textContent = s.l;
+  cont.appendChild(fill); item.appendChild(val); item.appendChild(cont); item.appendChild(lbl);
+  bv.appendChild(item);
+  return { fill, val, s };
+});
+document.getElementById('lam').addEventListener('input', function() {
+  const lam = parseFloat(this.value);
+  document.getElementById('lamval').textContent = `λ = ${lam.toFixed(1)}`;
+  items.forEach(({ fill, val, s }) => {
+    const conf = Math.max(0.05, s.base - lam * s.sens);
+    fill.style.height = (conf*100)+'%';
+    val.textContent = Math.round(conf*100)+'%';
+  });
+});
+
+// ── RELIABILITY DIAGRAMS ──
+function buildRel(id, data, lineColor) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  const labs = ['0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9','1.0'];
+  data.forEach(([acc, conf], i) => {
+    const bin = document.createElement('div'); bin.className = 'rel-bin';
+    bin.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;height:100%;position:relative;justify-content:flex-end';
+    const bar = document.createElement('div'); bar.className = 'rb-acc';
+    bar.style.cssText = `width:100%;height:${acc}%;background:rgba(91,140,255,.35);border-radius:3px 3px 0 0;border:1px solid rgba(91,140,255,.5)`;
+    const line = document.createElement('div'); line.className = 'rb-conf-line';
+    line.style.cssText = `position:absolute;bottom:${conf-1}%;left:0;right:0;height:2px;border-top:2px dashed ${lineColor};opacity:.8`;
+    const lbl = document.createElement('div'); lbl.className = 'rb-lbl'; lbl.textContent = labs[i];
+    bin.appendChild(bar); bin.appendChild(line); bin.appendChild(lbl);
+    c.appendChild(bin);
+  });
+}
+buildRel('relBad',[[8,10],[15,20],[22,30],[32,40],[42,50],[50,60],[48,70],[42,80],[35,90],[25,100]],'rgba(245,200,66,.8)');
+buildRel('relGood',[[9,10],[18,20],[30,30],[39,40],[49,50],[60,60],[70,70],[78,80],[88,90],[91,100]],'rgba(61,232,176,.8)');
+
+// ── SCROLL REVEAL ──
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// ── SIDENAV ──
+const secs = ['hero','s1','s2','s3','s4','s5','s6'];
+const dots = document.querySelectorAll('.snav-dot');
+window.addEventListener('scroll', () => {
+  const y = window.scrollY + window.innerHeight * .4;
+  let active = 0;
+  secs.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && el.offsetTop <= y) active = i;
+  });
+  dots.forEach((d, i) => d.classList.toggle('active', i === active));
+});
+dots.forEach((d, i) => d.addEventListener('click', () => {
+  document.getElementById(secs[i])?.scrollIntoView({ behavior:'smooth' });
+}));
+</script>
+
+
+</body></html>
