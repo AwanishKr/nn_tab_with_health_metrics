@@ -1,4 +1,5 @@
 import os
+import json
 import math
 import pickle as pkl
 import torch
@@ -9,48 +10,6 @@ import pandas as pd
 from copy import deepcopy
 from collections import defaultdict
 from sklearn.neighbors import NearestNeighbors
-
-
-
-def add_logits_to_aum_dict(model, loader, device, aum_dict_template):
-    """
-    Collect logits + targets for all samples at the current checkpoint/epoch.
-    Appends new logits/targets instead of overwriting.
-
-    Args:
-        model: Trained torch model
-        loader: PyTorch DataLoader returning (x, y, ..., sample_id)
-        device: torch.device
-        aum_dict_template: dict with sample_ids as keys (initialized with count/margin/aum etc.)
-        batch_size: size of each batch
-    """
-    model.eval()
-    aum_dict_epoch = deepcopy(aum_dict_template)  # copy existing dict
-
-    with torch.no_grad():
-        for inputs, targets, _, sample_ids in loader:
-            inputs = inputs.to(device)
-            targets = targets.to(device)
-            logits = model(inputs)  # [B, num_classes]
-            
-            logits_list = logits.detach().cpu().tolist()
-            targets_list = targets.detach().cpu().tolist()
-            
-            # Convert sample_ids to list if it's a tensor
-            if isinstance(sample_ids, torch.Tensor):
-                sample_ids = sample_ids.tolist()
-
-            for sample_id, logit_vec, target in zip(sample_ids, logits_list, targets_list):
-                if "logits" not in aum_dict_epoch[sample_id]:
-                    aum_dict_epoch[sample_id]["logits"] = []
-                if "targets" not in aum_dict_epoch[sample_id]:
-                    aum_dict_epoch[sample_id]["targets"] = []
-
-                # append new values for this checkpoint
-                aum_dict_epoch[sample_id]["logits"] = logit_vec
-                aum_dict_epoch[sample_id]["targets"] = target
-
-    return aum_dict_epoch
 
 
 
@@ -86,53 +45,49 @@ def calculate_aum(logits, targets, sample_ids, aum_dict, epoch):
     return aum_dict
 
 
-import torch
-from collections import defaultdict
+# def compute_grand_score(model, X_batch, y_batch, criterion, grand_scores, sample_ids):
+#     """
+#     GRAND computation:
+#     - uses per-sample loss (criterion with reduction='none')
+#     - computes gradients with torch.autograd.grad
+#     - maintains {id: [count, sum, mean]} dict
+#     """
+#     model.eval()  # disable dropout/bn randomness
 
+#     X_batch, y_batch = X_batch.to(next(model.parameters()).device), y_batch.to(next(model.parameters()).device)
 
-def compute_grand_score(model, X_batch, y_batch, criterion, grand_scores, sample_ids):
-    """
-    GRAND computation:
-    - uses per-sample loss (criterion with reduction='none')
-    - computes gradients with torch.autograd.grad
-    - maintains {id: [count, sum, mean]} dict
-    """
-    model.eval()  # disable dropout/bn randomness
+#     # Ensure gradients are enabled
+#     with torch.set_grad_enabled(True):
+#         outputs = model(X_batch)
+#         losses = criterion(outputs, y_batch)  # shape [B], still connected to graph
 
-    X_batch, y_batch = X_batch.to(next(model.parameters()).device), y_batch.to(next(model.parameters()).device)
+#         grad_norms = []
+#         for i in range(X_batch.size(0)):
+#             grads = torch.autograd.grad(
+#                 losses[i],
+#                 model.parameters(),
+#                 retain_graph=True,
+#                 create_graph=False
+#             )
+#             grad_norm = torch.cat([g.reshape(-1) for g in grads]).norm().item()
+#             grad_norms.append(grad_norm)
 
-    # Ensure gradients are enabled
-    with torch.set_grad_enabled(True):
-        outputs = model(X_batch)
-        losses = criterion(outputs, y_batch)  # shape [B], still connected to graph
-
-        grad_norms = []
-        for i in range(X_batch.size(0)):
-            grads = torch.autograd.grad(
-                losses[i],
-                model.parameters(),
-                retain_graph=True,
-                create_graph=False
-            )
-            grad_norm = torch.cat([g.reshape(-1) for g in grads]).norm().item()
-            grad_norms.append(grad_norm)
-
-    # update dict {id: [count, sum, mean]}
-    for sample_id, gn in zip(sample_ids, grad_norms):
-        if len(grand_scores[sample_id]) == 0:
-            grand_scores[sample_id] = {
-                "count": 1,
-                "gn_sum": gn,
-                "gn_mean": gn
-            }
-            # grand_scores[sample_id].extend([1, gn, gn])  # count, sum, mean
-        else:
-            grand_scores[sample_id]["count"] += 1
-            grand_scores[sample_id]["gn_sum"] += gn
-            grand_scores[sample_id]["gn_mean"] = grand_scores[sample_id][1] / grand_scores[sample_id][0]
+#     # update dict {id: [count, sum, mean]}
+#     for sample_id, gn in zip(sample_ids, grad_norms):
+#         if len(grand_scores[sample_id]) == 0:
+#             grand_scores[sample_id] = {
+#                 "count": 1,
+#                 "gn_sum": gn,
+#                 "gn_mean": gn
+#             }
+#             # grand_scores[sample_id].extend([1, gn, gn])  # count, sum, mean
+#         else:
+#             grand_scores[sample_id]["count"] += 1
+#             grand_scores[sample_id]["gn_sum"] += gn
+#             grand_scores[sample_id]["gn_mean"] = grand_scores[sample_id][1] / grand_scores[sample_id][0]
             
 
-    return grand_scores
+#     return grand_scores
 
 
             
@@ -221,7 +176,7 @@ def update_forgetting(logits, labels, sample_ids, epoch, forgetting_scores):
 
 
 
-def compute_gradient_norms_pass(model, loader, device, grad_norm_array, epoch_idx):
+def compute_gradient_norms_pass(model, loader, device, grad_norm_array, epoch_idx, criterion):
     """
     One pass over the training loader to compute per-sample gradient norms (GraNd signal).
     Fills grad_norm_array[:, epoch_idx] in-place.
@@ -235,9 +190,10 @@ def compute_gradient_norms_pass(model, loader, device, grad_norm_array, epoch_id
         device: torch device
         grad_norm_array: np.ndarray of shape [N_samples, K_epochs], filled in-place
         epoch_idx: column index (0-based) to write into grad_norm_array
+        criterion: loss function with reduction='none' (matches the configured training loss)
     """
     model.eval()
-    criterion_none = torch.nn.CrossEntropyLoss(reduction='none')
+    last_linear = [m for m in model.modules() if isinstance(m, torch.nn.Linear)][-1]
 
     for X, y, idx, _ in loader:
         X = X.to(device, dtype=torch.float32)
@@ -246,12 +202,12 @@ def compute_gradient_norms_pass(model, loader, device, grad_norm_array, epoch_id
 
         model.zero_grad()
         outputs = model(X)
-        losses = criterion_none(outputs, y)  # [B]
+        losses = criterion(outputs, y)  # [B]
 
         for i in range(batch_size):
             grads = torch.autograd.grad(
                 losses[i],
-                model.parameters(),
+                last_linear.parameters(),
                 retain_graph=(i < batch_size - 1),
                 create_graph=False
             )
@@ -259,11 +215,6 @@ def compute_gradient_norms_pass(model, loader, device, grad_norm_array, epoch_id
             grad_norm_array[idx[i].item(), epoch_idx] = grad_norm
 
     model.train()
-
-
-from sklearn.neighbors import NearestNeighbors
-import torch
-import numpy as np
 
 
 def prediction_depth_knn(layer_reps, y, sample_ids, depth_scores, k=10):
@@ -307,16 +258,20 @@ class TrainingSignalCollector:
     score dictionaries (AUM, EL2N, forgetting) updated each training batch.
     """
 
-    def __init__(self, num_samples, epochs, num_classes):
+    def __init__(self, num_samples, epochs, num_classes, criterion_cls):
         self.aum_dict = {}
         self.el2n_scores = {}
         self.forgetting_scores = {}
 
         self.logits_array = np.zeros((num_samples, epochs, num_classes), dtype=np.float16)
-        self.loss_array = np.zeros((num_samples, epochs), dtype=np.float32)
+        self.loss_array = np.zeros((num_samples, epochs), dtype=np.float16)
         self.correct_array = np.zeros((num_samples, epochs), dtype=np.uint8)
+        self.targets_array = np.full(num_samples, -1, dtype=np.int64)
         self.grad_norm_epochs = min(5, epochs)
-        self.grad_norm_array = np.zeros((num_samples, self.grad_norm_epochs), dtype=np.float32)
+        self.grad_norm_array = np.zeros((num_samples, self.grad_norm_epochs), dtype=np.float16)
+
+        self._per_sample_criterion = deepcopy(criterion_cls)
+        self._per_sample_criterion.reduction = 'none'
 
 
     def update_batch(self, output, conf, target, idx, identifier, epoch_num):
@@ -325,8 +280,9 @@ class TrainingSignalCollector:
         ep = epoch_num - 1  # 0-based column index
 
         self.logits_array[idx_np, ep, :] = output.detach().cpu().numpy()
+        self.targets_array[idx_np] = target.detach().cpu().numpy()
 
-        per_sample_loss = F.cross_entropy(output.detach(), target.detach(), reduction='none')
+        per_sample_loss = self._per_sample_criterion(output.detach(), target.detach())
         self.loss_array[idx_np, ep] = per_sample_loss.cpu().numpy()
 
         _, predicted = output.detach().max(1)
@@ -341,25 +297,79 @@ class TrainingSignalCollector:
     def compute_grad_norms(self, model, loader, device, epoch_num):
         """Compute gradient norms for the first grad_norm_epochs epochs."""
         if epoch_num <= self.grad_norm_epochs:
-            compute_gradient_norms_pass(model, loader, device, self.grad_norm_array, epoch_num - 1)
+            compute_gradient_norms_pass(model, loader, device, self.grad_norm_array, epoch_num - 1, self._per_sample_criterion)
 
 
-    def save_epoch_scores(self, epoch_num, aum_dir, el2n_dir, forgetting_dir, model, loader, device):
+    def save_epoch_scores(self, epoch_num, aum_dir, el2n_dir, forgetting_dir):
         """Save AUM, EL2N, and forgetting score dicts as pickles for this epoch."""
+        ep = epoch_num - 1
+        aum_dict_with_logits = deepcopy(self.aum_dict)
+        for sample_id in aum_dict_with_logits:
+            aum_dict_with_logits[sample_id]["logits"] = self.logits_array[sample_id, ep, :].tolist()
+            aum_dict_with_logits[sample_id]["targets"] = int(self.targets_array[sample_id])
         with open(os.path.join(aum_dir, f"aum_dict_{epoch_num}.pkl"), "wb") as f:
-            pkl.dump(add_logits_to_aum_dict(model, loader, device, self.aum_dict), f)
+            pkl.dump(aum_dict_with_logits, f)
         with open(os.path.join(el2n_dir, f"el2n_score_dict_{epoch_num}.pkl"), "wb") as f:
             pkl.dump(self.el2n_scores, f)
         with open(os.path.join(forgetting_dir, f"forgetting_scores_dict_{epoch_num}.pkl"), "wb") as f:
             pkl.dump(self.forgetting_scores, f)
 
 
-    def save_raw_arrays(self, raw_signals_dir):
-        """Save all raw signal arrays as .npy files."""
+    def extract_embeddings(self, model, loader, device):
+        """Extract penultimate-layer embeddings via a single eval pass.
+
+        Registers a forward hook on the last Linear layer to capture its input
+        (the penultimate activation). Stores result in self.embeddings_array [N, D].
+        """
+        last_linear = [m for m in model.modules() if isinstance(m, torch.nn.Linear)][-1]
+        embed_dim = last_linear.in_features
+        num_samples = self.logits_array.shape[0]
+        self.embeddings_array = np.zeros((num_samples, embed_dim), dtype=np.float16)
+
+        captured = {}
+
+        def hook_fn(module, input, output):
+            captured['input'] = input[0].detach()
+
+        handle = last_linear.register_forward_hook(hook_fn)
+
+        model.eval()
+        with torch.no_grad():
+            for X, _, idx, _ in loader:
+                X = X.to(device, dtype=torch.float32)
+                model(X)
+                self.embeddings_array[idx.numpy()] = captured['input'].cpu().numpy()
+
+        handle.remove()
+        model.train()
+
+    def save_raw_arrays(self, raw_signals_dir, actual_epochs=None, configured_epochs=None, early_stopped=False):
+        """Save all raw signal arrays as .npy files and training metadata as JSON."""
+        # Trim zero-padded epoch columns if early stopping occurred
+        if actual_epochs is not None and actual_epochs < self.logits_array.shape[1]:
+            self.logits_array = self.logits_array[:, :actual_epochs, :]
+            self.loss_array = self.loss_array[:, :actual_epochs]
+            self.correct_array = self.correct_array[:, :actual_epochs]
+
         np.save(os.path.join(raw_signals_dir, "logits_array.npy"), self.logits_array)
         np.save(os.path.join(raw_signals_dir, "loss_array.npy"), self.loss_array)
         np.save(os.path.join(raw_signals_dir, "correct_array.npy"), self.correct_array)
         np.save(os.path.join(raw_signals_dir, "grad_norm_array.npy"), self.grad_norm_array)
+
+        if hasattr(self, 'embeddings_array'):
+            np.save(os.path.join(raw_signals_dir, "embeddings.npy"), self.embeddings_array)
+
+        if actual_epochs is not None:
+            metadata = {
+                "actual_epochs": actual_epochs,
+                "configured_epochs": configured_epochs,
+                "early_stopped": early_stopped,
+                "num_samples": int(self.logits_array.shape[0]),
+                "num_classes": int(self.logits_array.shape[2]),
+                "grad_norm_epochs": int(self.grad_norm_epochs),
+            }
+            with open(os.path.join(raw_signals_dir, "training_metadata.json"), "w") as f:
+                json.dump(metadata, f, indent=2)
 
 
     def save_dataset_snapshot(self, train_loader, raw_signals_dir):

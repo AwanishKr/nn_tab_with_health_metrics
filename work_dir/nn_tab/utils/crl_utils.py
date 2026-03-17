@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # rank target entropy
@@ -71,14 +70,14 @@ class ForgettingTracker:
         less = np.array(target1 < target2, dtype='float') 
 
         target = greater + less
-        target = torch.from_numpy(target).float().to(device)
-        
+        target = torch.from_numpy(target).float()
+
         # calc margin
         margin = abs(target1 - target2)
-        margin = torch.from_numpy(margin).float().to(device)
+        margin = torch.from_numpy(margin).float()
 
         return target, margin
-    
+
     def max_forgetting_update(self, epoch):
         if epoch > 1:
             self.max_forgetting += 1
@@ -129,10 +128,10 @@ class History(object):
         less = np.array(target1 < target2, dtype='float') * (-1)
 
         target = greater + less
-        target = torch.from_numpy(target).float().to(device)
+        target = torch.from_numpy(target).float()
         # calc margin
         margin = abs(target1 - target2)
-        margin = torch.from_numpy(margin).float().to(device)
+        margin = torch.from_numpy(margin).float()
 
         return target, margin
     

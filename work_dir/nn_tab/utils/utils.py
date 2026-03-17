@@ -226,7 +226,7 @@ def train_fn(model, data_loader, optimizer, device, criterion):
 
 
 
-def train_crl(loader, model, criterion_cls, criterion_ranking, optimizer, epoch, chistory, fhistory, rank_weight, rank_weight_f, device, collector):
+def train_crl(loader, model, criterion_cls, criterion_ranking, optimizer, epoch, chistory, fhistory, rank_weight, rank_weight_f, device):
     """Curriculum Learning training function for confidence-aware training.
 
     Args:
@@ -241,7 +241,6 @@ def train_crl(loader, model, criterion_cls, criterion_ranking, optimizer, epoch,
         rank_weight: Weight for ranking loss
         rank_weight_f: Weight for forgetting-based ranking
         device: Device to run training on (cuda/cpu)
-        collector: TrainingSignalCollector instance for recording per-sample signals
 
     Returns:
         tuple: (avg_loss, accuracy)
@@ -296,9 +295,6 @@ def train_crl(loader, model, criterion_cls, criterion_ranking, optimizer, epoch,
         cls_loss = criterion_cls(output, target)
         loss = cls_loss + rank_weight * ranking_loss + rank_weight_f * ranking_loss_f
 
-        # Update all per-sample training signals via collector
-        collector.update_batch(output, conf, target, idx, identifier, epoch)
-
         # Check for NaN or inf values
         if check_for_invalid_values(inputx, output, loss, "training"):
             break
@@ -343,8 +339,8 @@ def train_crl(loader, model, criterion_cls, criterion_ranking, optimizer, epoch,
         auroc = roc_auc_score(all_train_targets, all_train_preds)
     except ValueError:
         auroc = float('nan')
-
     return avg_loss, accuracy
+
 
 
 def train_model_crl(model, epochs, optimizer, scheduler, train_loader, val_loader, rank_weight, rank_weight_f, criterion, device, exp_name, model_name, training_method):
@@ -398,7 +394,7 @@ def train_model_crl(model, epochs, optimizer, scheduler, train_loader, val_loade
     num_classes = last_linear.out_features
 
     # Initialize signal collector and save the dataset snapshot before training starts
-    collector = TrainingSignalCollector(num_samples, epochs, num_classes)
+    collector = TrainingSignalCollector(num_samples, epochs, num_classes, criterion_cls)
     collector.save_dataset_snapshot(train_loader, raw_signals_dir)
     logger.info(f"Training dataset snapshot saved: {num_samples} samples")
 
@@ -406,12 +402,24 @@ def train_model_crl(model, epochs, optimizer, scheduler, train_loader, val_loade
         train_loss, train_accuracy = train_crl(
             train_loader, model, criterion_cls, criterion_ranking, optimizer,
             epoch_num, correctness_history, forgetting_history,
-            rank_weight, rank_weight_f, device, collector
+            rank_weight, rank_weight_f, device
         )
+
+        # Eval pass to record clean per-sample signals (model.eval removes dropout/BN noise)
+        model.eval()
+        with torch.no_grad():
+            for inputx, target, idx, identifier in train_loader:
+                inputx = inputx.to(device, dtype=torch.float32)
+                target = target.to(device)
+                output = model(inputx)
+                conf = F.softmax(output, dim=1)
+                collector.update_batch(output, conf, target, idx, identifier, epoch_num)
+        model.train()
+
         val_loss, test_accuracy, test_aucpr = val_fn(model, val_loader, device, criterion_cls, training_method)
 
         collector.compute_grad_norms(model, train_loader, device, epoch_num)        
-        collector.save_epoch_scores(epoch_num, aum_dir, el2n_dir, forgetting_dir, model, train_loader, device)
+        collector.save_epoch_scores(epoch_num, aum_dir, el2n_dir, forgetting_dir)
 
         scheduler.step(val_loss)
         lrs.append(optimizer.param_groups[0]["lr"])
@@ -440,7 +448,13 @@ def train_model_crl(model, epochs, optimizer, scheduler, train_loader, val_loade
             else:
                 logger.info("Counter increased but haven't reached max_epochs_without_improvement, continuing training")
 
-    collector.save_raw_arrays(raw_signals_dir)
+    actual_epochs = epoch_num
+    early_stopped = (counter >= max_epochs_without_improvement)
+
+    collector.extract_embeddings(model, train_loader, device)
+    logger.info(f"Penultimate-layer embeddings extracted for {num_samples} samples")
+
+    collector.save_raw_arrays(raw_signals_dir, actual_epochs=actual_epochs, configured_epochs=epochs, early_stopped=early_stopped)
     logger.info(f"Raw signals saved to: {raw_signals_dir}")
     plot_loss_curve(exp_name, model_name, train_losses.get_history(), val_losses.get_history())
 

@@ -13,11 +13,11 @@ from .utils import (
 )
 
 from .calculate_scores import (
-    add_logits_to_aum_dict,
+    TrainingSignalCollector,
     calculate_aum,
-    compute_grand_score,
     EL2N_score,
     update_forgetting,
+    compute_gradient_norms_pass,
     prediction_depth_knn
 )
 
@@ -35,12 +35,12 @@ __all__ = [
     'train_model',
     'train_model_crl',
     
-    # Score calculation functions
-    'add_logits_to_aum_dict',
+    # Score calculation functions (DataGenome signals)
+    'TrainingSignalCollector',
     'calculate_aum',
-    'compute_grand_score',
     'EL2N_score',
     'update_forgetting',
+    'compute_gradient_norms_pass',
     'prediction_depth_knn',
     
     # Curriculum learning utilities

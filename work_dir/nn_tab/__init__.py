@@ -13,7 +13,7 @@ A comprehensive library for training neural networks on tabular data with:
 # Import from submodules
 from .datasets import read_train_data, RobustScaleSmoothClipTransform, smart_read_data
 from .models import get_model, fraudmodel_3layer, fraudmodel_5layer, fraudmodel_7layer, fraudmodel_8layer
-from .utils import train_model, train_model_crl, val_fn, train_fn, check_for_invalid_values
+from .utils import train_model, train_model_crl, val_fn, train_fn, check_for_invalid_values, TrainingSignalCollector
 from .plots import auc_plot, plot_loss_curve, tnxs_plots
 from .config_loader import load_config
 from .logger import setup_logger, get_logger, LoggerMixin
@@ -63,6 +63,7 @@ __all__ = [
     
     # Utilities
     'check_for_invalid_values',  # Data validation
+    'TrainingSignalCollector',   # DataGenome per-sample signal collection
     
     # Submodules
     'datasets',
