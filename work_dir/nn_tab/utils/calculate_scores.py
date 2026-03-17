@@ -1,14 +1,10 @@
 import os
 import json
-import math
-import pickle as pkl
 import torch
-import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 
 from copy import deepcopy
-from collections import defaultdict
 from sklearn.neighbors import NearestNeighbors
 
 
@@ -252,17 +248,14 @@ def prediction_depth_knn(layer_reps, y, sample_ids, depth_scores, k=10):
 
 
 class TrainingSignalCollector:
-    """Collects and manages all per-sample training signals for DataGenome analysis.
+    """Collects raw per-sample training signals for DataGenome analysis.
 
-    Holds raw signal arrays (logits, loss, correctness, gradient norms) and
-    score dictionaries (AUM, EL2N, forgetting) updated each training batch.
+    Captures only the minimal raw signals during training: logits, per-sample
+    loss, correctness flags, and gradient norms. All derived metrics (AUM,
+    EL2N, forgetting events, etc.) are computed post-training from these arrays.
     """
 
     def __init__(self, num_samples, epochs, num_classes, criterion_cls):
-        self.aum_dict = {}
-        self.el2n_scores = {}
-        self.forgetting_scores = {}
-
         self.logits_array = np.zeros((num_samples, epochs, num_classes), dtype=np.float16)
         self.loss_array = np.zeros((num_samples, epochs), dtype=np.float16)
         self.correct_array = np.zeros((num_samples, epochs), dtype=np.uint8)
@@ -274,8 +267,15 @@ class TrainingSignalCollector:
         self._per_sample_criterion.reduction = 'none'
 
 
-    def update_batch(self, output, conf, target, idx, identifier, epoch_num):
-        """Update all per-batch signals: raw arrays and score dicts."""
+    def update_batch(self, output, target, idx, epoch_num):
+        """Record raw per-sample signals for one batch.
+
+        Args:
+            output: model logits [B, C] (detached or not, will be detached here).
+            target: ground-truth labels [B].
+            idx: sample indices [B] mapping into the pre-allocated arrays.
+            epoch_num: 1-based epoch number.
+        """
         idx_np = idx.cpu().numpy()
         ep = epoch_num - 1  # 0-based column index
 
@@ -288,31 +288,11 @@ class TrainingSignalCollector:
         _, predicted = output.detach().max(1)
         self.correct_array[idx_np, ep] = (predicted == target).cpu().numpy().astype(np.uint8)
 
-        id_list = identifier.tolist()
-        self.aum_dict = calculate_aum(output.detach().cpu(), target.detach().cpu(), id_list, self.aum_dict, epoch_num)
-        self.el2n_scores = EL2N_score(conf.detach().cpu(), target.detach().cpu(), id_list, self.el2n_scores, epoch_num)
-        self.forgetting_scores = update_forgetting(output.detach().cpu(), target.detach().cpu(), id_list, epoch_num, self.forgetting_scores)
-
 
     def compute_grad_norms(self, model, loader, device, epoch_num):
         """Compute gradient norms for the first grad_norm_epochs epochs."""
         if epoch_num <= self.grad_norm_epochs:
             compute_gradient_norms_pass(model, loader, device, self.grad_norm_array, epoch_num - 1, self._per_sample_criterion)
-
-
-    def save_epoch_scores(self, epoch_num, aum_dir, el2n_dir, forgetting_dir):
-        """Save AUM, EL2N, and forgetting score dicts as pickles for this epoch."""
-        ep = epoch_num - 1
-        aum_dict_with_logits = deepcopy(self.aum_dict)
-        for sample_id in aum_dict_with_logits:
-            aum_dict_with_logits[sample_id]["logits"] = self.logits_array[sample_id, ep, :].tolist()
-            aum_dict_with_logits[sample_id]["targets"] = int(self.targets_array[sample_id])
-        with open(os.path.join(aum_dir, f"aum_dict_{epoch_num}.pkl"), "wb") as f:
-            pkl.dump(aum_dict_with_logits, f)
-        with open(os.path.join(el2n_dir, f"el2n_score_dict_{epoch_num}.pkl"), "wb") as f:
-            pkl.dump(self.el2n_scores, f)
-        with open(os.path.join(forgetting_dir, f"forgetting_scores_dict_{epoch_num}.pkl"), "wb") as f:
-            pkl.dump(self.forgetting_scores, f)
 
 
     def extract_embeddings(self, model, loader, device):
@@ -343,6 +323,72 @@ class TrainingSignalCollector:
         handle.remove()
         model.train()
 
+    def extract_intermediate_embeddings(self, model, loader, device):
+        """Extract embeddings at 25%, 50%, 75% network depth for prediction depth probing.
+
+        For each depth level, hooks the corresponding Linear layer to capture its input
+        (the representation at that point in the network). Stores results in
+        self.intermediate_embeddings: dict mapping depth label to [N, D] array.
+        """
+        linear_layers = [m for m in model.modules() if isinstance(m, torch.nn.Linear)]
+        # Exclude the output (last) layer — hidden layers only
+        hidden_linears = linear_layers[:-1]
+        num_hidden = len(hidden_linears)
+
+        if num_hidden < 2:
+            # Too shallow for meaningful intermediate probing; skip
+            self.intermediate_embeddings = {}
+            return
+
+        # Select layers at approximately 25%, 50%, 75% depth
+        depth_targets = {
+            'depth_25': max(0, round(num_hidden * 0.25) - 1),
+            'depth_50': max(0, round(num_hidden * 0.50) - 1),
+            'depth_75': max(0, round(num_hidden * 0.75) - 1),
+        }
+
+        # Deduplicate if indices collide (e.g. very shallow network)
+        selected = {}
+        for label, idx in depth_targets.items():
+            selected[label] = hidden_linears[idx]
+
+        num_samples = self.logits_array.shape[0]
+        captured = {}
+        handles = []
+
+        for label, layer in selected.items():
+            embed_dim = layer.in_features
+            captured[label] = {
+                'array': np.zeros((num_samples, embed_dim), dtype=np.float16),
+                'batch_input': None,
+            }
+
+            def make_hook(lbl):
+                def hook_fn(module, inp, out):
+                    captured[lbl]['batch_input'] = inp[0].detach()
+                return hook_fn
+
+            handles.append(layer.register_forward_hook(make_hook(label)))
+
+        model.eval()
+        with torch.no_grad():
+            for X, _, idx, _ in loader:
+                X = X.to(device, dtype=torch.float32)
+                model(X)
+                idx_np = idx.numpy()
+                for label in selected:
+                    captured[label]['array'][idx_np] = (
+                        captured[label]['batch_input'].cpu().numpy()
+                    )
+
+        for h in handles:
+            h.remove()
+        model.train()
+
+        self.intermediate_embeddings = {
+            label: captured[label]['array'] for label in selected
+        }
+
     def save_raw_arrays(self, raw_signals_dir, actual_epochs=None, configured_epochs=None, early_stopped=False):
         """Save all raw signal arrays as .npy files and training metadata as JSON."""
         # Trim zero-padded epoch columns if early stopping occurred
@@ -359,6 +405,10 @@ class TrainingSignalCollector:
         if hasattr(self, 'embeddings_array'):
             np.save(os.path.join(raw_signals_dir, "embeddings.npy"), self.embeddings_array)
 
+        if hasattr(self, 'intermediate_embeddings') and self.intermediate_embeddings:
+            for label, arr in self.intermediate_embeddings.items():
+                np.save(os.path.join(raw_signals_dir, f"embeddings_{label}.npy"), arr)
+
         if actual_epochs is not None:
             metadata = {
                 "actual_epochs": actual_epochs,
@@ -367,6 +417,7 @@ class TrainingSignalCollector:
                 "num_samples": int(self.logits_array.shape[0]),
                 "num_classes": int(self.logits_array.shape[2]),
                 "grad_norm_epochs": int(self.grad_norm_epochs),
+                "intermediate_embedding_depths": list(self.intermediate_embeddings.keys()) if hasattr(self, 'intermediate_embeddings') and self.intermediate_embeddings else [],
             }
             with open(os.path.join(raw_signals_dir, "training_metadata.json"), "w") as f:
                 json.dump(metadata, f, indent=2)

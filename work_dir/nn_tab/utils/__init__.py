@@ -14,11 +14,7 @@ from .utils import (
 
 from .calculate_scores import (
     TrainingSignalCollector,
-    calculate_aum,
-    EL2N_score,
-    update_forgetting,
     compute_gradient_norms_pass,
-    prediction_depth_knn
 )
 
 from .crl_utils import (
@@ -35,13 +31,9 @@ __all__ = [
     'train_model',
     'train_model_crl',
     
-    # Score calculation functions (DataGenome signals)
+    # Raw signal collection (DataGenome)
     'TrainingSignalCollector',
-    'calculate_aum',
-    'EL2N_score',
-    'update_forgetting',
     'compute_gradient_norms_pass',
-    'prediction_depth_knn',
     
     # Curriculum learning utilities
     'negative_entropy',

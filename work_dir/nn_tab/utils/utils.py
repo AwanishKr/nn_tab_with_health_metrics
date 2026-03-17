@@ -377,16 +377,9 @@ def train_model_crl(model, epochs, optimizer, scheduler, train_loader, val_loade
     correctness_history = History(len(train_loader.dataset))
     forgetting_history = ForgettingTracker(num_examples=len(train_loader.dataset))
     
-    # Create directory structure once before training loop
+    # Create directory for raw signal storage
     history_metrics_dir = os.path.join(os.getcwd(), "history_metrics", exp_name)
-    aum_dir = os.path.join(history_metrics_dir, "aum_scores")
-    el2n_dir = os.path.join(history_metrics_dir, "el2n_scores")
-    forgetting_dir = os.path.join(history_metrics_dir, "forgetting_scores")
     raw_signals_dir = os.path.join(history_metrics_dir, "raw_signals")
-    
-    os.makedirs(aum_dir, exist_ok=True)
-    os.makedirs(el2n_dir, exist_ok=True)
-    os.makedirs(forgetting_dir, exist_ok=True)
     os.makedirs(raw_signals_dir, exist_ok=True)
 
     num_samples = len(train_loader.dataset)
@@ -408,18 +401,16 @@ def train_model_crl(model, epochs, optimizer, scheduler, train_loader, val_loade
         # Eval pass to record clean per-sample signals (model.eval removes dropout/BN noise)
         model.eval()
         with torch.no_grad():
-            for inputx, target, idx, identifier in train_loader:
+            for inputx, target, idx, _ in train_loader:
                 inputx = inputx.to(device, dtype=torch.float32)
                 target = target.to(device)
                 output = model(inputx)
-                conf = F.softmax(output, dim=1)
-                collector.update_batch(output, conf, target, idx, identifier, epoch_num)
+                collector.update_batch(output, target, idx, epoch_num)
         model.train()
 
         val_loss, test_accuracy, test_aucpr = val_fn(model, val_loader, device, criterion_cls, training_method)
 
-        collector.compute_grad_norms(model, train_loader, device, epoch_num)        
-        collector.save_epoch_scores(epoch_num, aum_dir, el2n_dir, forgetting_dir)
+        collector.compute_grad_norms(model, train_loader, device, epoch_num)
 
         scheduler.step(val_loss)
         lrs.append(optimizer.param_groups[0]["lr"])
@@ -453,6 +444,10 @@ def train_model_crl(model, epochs, optimizer, scheduler, train_loader, val_loade
 
     collector.extract_embeddings(model, train_loader, device)
     logger.info(f"Penultimate-layer embeddings extracted for {num_samples} samples")
+
+    collector.extract_intermediate_embeddings(model, train_loader, device)
+    depth_labels = list(collector.intermediate_embeddings.keys()) if collector.intermediate_embeddings else []
+    logger.info(f"Intermediate-layer embeddings extracted at depths: {depth_labels}")
 
     collector.save_raw_arrays(raw_signals_dir, actual_epochs=actual_epochs, configured_epochs=epochs, early_stopped=early_stopped)
     logger.info(f"Raw signals saved to: {raw_signals_dir}")
