@@ -17,7 +17,7 @@ from .utils import train_model, train_model_crl, val_fn, train_fn, check_for_inv
 from .plots import auc_plot, plot_loss_curve, tnxs_plots
 from .config_loader import load_config
 from .logger import setup_logger, get_logger, LoggerMixin
-from .embedding_analysis import compute_knn_density, compute_prototypicality
+from .metrics_generation import compute_knn_density, compute_prototypicality
 
 # Import submodules for module-level access
 from . import datasets
@@ -25,7 +25,7 @@ from . import models
 from . import utils
 from . import plots
 from . import config_loader
-from . import embedding_analysis
+from . import metrics_generation
 
 __version__ = "0.1.0"
 __author__ = "Awanish Kumar"
@@ -77,7 +77,7 @@ __all__ = [
     'utils',
     'plots',
     'config_loader',
-    'embedding_analysis',
+    'metrics_generation',
 ]
 
 def help():

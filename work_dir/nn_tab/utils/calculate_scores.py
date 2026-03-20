@@ -9,36 +9,36 @@ from sklearn.neighbors import NearestNeighbors
 
 
 
-def calculate_aum(logits, targets, sample_ids, aum_dict, epoch):
-    target_values = logits.gather(1, targets.view(-1, 1)).squeeze()
+# def calculate_aum(logits, targets, sample_ids, aum_dict, epoch):
+#     target_values = logits.gather(1, targets.view(-1, 1)).squeeze()
 
-    # mask out target values
-    masked_logits = torch.scatter(logits, 1, targets.view(-1, 1), float('-inf'))
-    other_logit_values, _ = masked_logits.max(1)
-    other_logit_values = other_logit_values.squeeze()
-    margin_values = (target_values - other_logit_values).tolist()
+#     # mask out target values
+#     masked_logits = torch.scatter(logits, 1, targets.view(-1, 1), float('-inf'))
+#     other_logit_values, _ = masked_logits.max(1)
+#     other_logit_values = other_logit_values.squeeze()
+#     margin_values = (target_values - other_logit_values).tolist()
 
-    for sample_id, margin in zip(sample_ids, margin_values):
-        if sample_id not in aum_dict:
-            aum_dict[sample_id] = {
-                "epoch": epoch,
-                "margin_sum": margin,
-                "aum": margin
-            }
-        if "epoch" not in aum_dict[sample_id]:  # first time seeing this sample
-            aum_dict[sample_id] = {
-                "epoch": epoch,
-                "margin_sum": margin,
-                "aum": margin
-            }
-        else:
-            aum_dict[sample_id]["epoch"] = epoch
-            aum_dict[sample_id]["margin_sum"] += margin
-            aum_dict[sample_id]["aum"] = (
-                aum_dict[sample_id]["margin_sum"] / aum_dict[sample_id]["epoch"]
-            )
+#     for sample_id, margin in zip(sample_ids, margin_values):
+#         if sample_id not in aum_dict:
+#             aum_dict[sample_id] = {
+#                 "epoch": epoch,
+#                 "margin_sum": margin,
+#                 "aum": margin
+#             }
+#         if "epoch" not in aum_dict[sample_id]:  # first time seeing this sample
+#             aum_dict[sample_id] = {
+#                 "epoch": epoch,
+#                 "margin_sum": margin,
+#                 "aum": margin
+#             }
+#         else:
+#             aum_dict[sample_id]["epoch"] = epoch
+#             aum_dict[sample_id]["margin_sum"] += margin
+#             aum_dict[sample_id]["aum"] = (
+#                 aum_dict[sample_id]["margin_sum"] / aum_dict[sample_id]["epoch"]
+#             )
 
-    return aum_dict
+#     return aum_dict
 
 
 # def compute_grand_score(model, X_batch, y_batch, criterion, grand_scores, sample_ids):
@@ -88,85 +88,85 @@ def calculate_aum(logits, targets, sample_ids, aum_dict, epoch):
 
             
     
-def EL2N_score(probs, y, sample_ids, el2n_scores, epoch):
-    """
-    Compute/update EL2N scores.
+# def EL2N_score(probs, y, sample_ids, el2n_scores, epoch):
+#     """
+#     Compute/update EL2N scores.
     
-    probs: [B, C] softmax probabilities
-    y:     [B] ground-truth labels
-    sample_ids: list/array of IDs for the batch
-    el2n_scores: dict {id: [count, sum, mean]} to be updated
-    """
-    one_hot = torch.nn.functional.one_hot(y, num_classes=probs.size(1)).float()
-    errors = torch.norm(probs - one_hot, dim=1)   # [B]
+#     probs: [B, C] softmax probabilities
+#     y:     [B] ground-truth labels
+#     sample_ids: list/array of IDs for the batch
+#     el2n_scores: dict {id: [count, sum, mean]} to be updated
+#     """
+#     one_hot = torch.nn.functional.one_hot(y, num_classes=probs.size(1)).float()
+#     errors = torch.norm(probs - one_hot, dim=1)   # [B]
 
-    for sid, err in zip(sample_ids, errors):
-        err_val = err.item()
-        if sid not in el2n_scores:
-            el2n_scores[sid] = {
-                "epoch": epoch,
-                "sum": err_val,
-                "mean": err_val,
-            }
-        elif len(el2n_scores[sid]) == 0:
-            el2n_scores[sid].extend([epoch, err_val, err_val])  # count, sum, mean
-        else:
-            el2n_scores[sid]['epoch'] = epoch
-            el2n_scores[sid]['sum'] += err_val
-            el2n_scores[sid]['mean'] = el2n_scores[sid]['sum'] / el2n_scores[sid]['epoch']
+#     for sid, err in zip(sample_ids, errors):
+#         err_val = err.item()
+#         if sid not in el2n_scores:
+#             el2n_scores[sid] = {
+#                 "epoch": epoch,
+#                 "sum": err_val,
+#                 "mean": err_val,
+#             }
+#         elif len(el2n_scores[sid]) == 0:
+#             el2n_scores[sid].extend([epoch, err_val, err_val])  # count, sum, mean
+#         else:
+#             el2n_scores[sid]['epoch'] = epoch
+#             el2n_scores[sid]['sum'] += err_val
+#             el2n_scores[sid]['mean'] = el2n_scores[sid]['sum'] / el2n_scores[sid]['epoch']
 
-    return el2n_scores
+#     return el2n_scores
         
             
             
-def update_forgetting(logits, labels, sample_ids, epoch, forgetting_scores):
-    """
-    Update forgetting statistics.
+# def update_forgetting(logits, labels, sample_ids, epoch, forgetting_scores):
+#     """
+#     Update forgetting statistics.
 
-    forgetting_scores[sid] = {
-        "forget_count": int,
-        "first_learned": int or None,
-        "last_learn_epoch": int or None,
-        "correct_count": int,
-        "first_forget_epoch": int or None
-    }
-    """
-    preds = logits.argmax(dim=1)
+#     forgetting_scores[sid] = {
+#         "forget_count": int,
+#         "first_learned": int or None,
+#         "last_learn_epoch": int or None,
+#         "correct_count": int,
+#         "first_forget_epoch": int or None
+#     }
+#     """
+#     preds = logits.argmax(dim=1)
 
-    for pred, label, sid in zip(preds, labels, sample_ids):
-        # Initialize entry if first time
-        if sid not in forgetting_scores:
-            forgetting_scores[sid] = {
-                "forget_count": 0,
-                "first_learned": None,
-                "last_learn_epoch": None,
-                "correct_count": 0,
-                "first_forget_epoch": None,
-                "_last_correct": False  # internal tracker, will be deleted later
-            }
+#     for pred, label, sid in zip(preds, labels, sample_ids):
+#         # Initialize entry if first time
+#         if sid not in forgetting_scores:
+#             forgetting_scores[sid] = {
+#                 "forget_count": 0,
+#                 "first_learned": None,
+#                 "last_learn_epoch": None,
+#                 "correct_count": 0,
+#                 "first_forget_epoch": None,
+#                 "_last_correct": False  # internal tracker, will be deleted later
+#             }
 
-        entry = forgetting_scores[sid]
-        was_correct = entry["_last_correct"]
-        now_correct = (pred.item() == label.item())
+#         entry = forgetting_scores[sid]
+#         was_correct = entry["_last_correct"]
+#         now_correct = (pred.item() == label.item())
 
-        # Count correct predictions
-        if now_correct:
-            entry["correct_count"] += 1
-            if entry["first_learned"] is None:
-                entry["first_learned"] = epoch
-            if not was_correct:  # flip from wrong → correct
-                entry["last_learn_epoch"] = epoch
+#         # Count correct predictions
+#         if now_correct:
+#             entry["correct_count"] += 1
+#             if entry["first_learned"] is None:
+#                 entry["first_learned"] = epoch
+#             if not was_correct:  # flip from wrong → correct
+#                 entry["last_learn_epoch"] = epoch
 
-        # Forgetting event
-        if was_correct and not now_correct:
-            entry["forget_count"] += 1
-            if entry["first_forget_epoch"] is None:
-                entry["first_forget_epoch"] = epoch
+#         # Forgetting event
+#         if was_correct and not now_correct:
+#             entry["forget_count"] += 1
+#             if entry["first_forget_epoch"] is None:
+#                 entry["first_forget_epoch"] = epoch
 
-        # Update last correctness
-        entry["_last_correct"] = now_correct
+#         # Update last correctness
+#         entry["_last_correct"] = now_correct
 
-    return forgetting_scores
+#     return forgetting_scores
 
 
 
@@ -401,6 +401,7 @@ class TrainingSignalCollector:
         np.save(os.path.join(raw_signals_dir, "loss_array.npy"), self.loss_array)
         np.save(os.path.join(raw_signals_dir, "correct_array.npy"), self.correct_array)
         np.save(os.path.join(raw_signals_dir, "grad_norm_array.npy"), self.grad_norm_array)
+        np.save(os.path.join(raw_signals_dir, "targets_array.npy"), self.targets_array)
 
         if hasattr(self, 'embeddings_array'):
             np.save(os.path.join(raw_signals_dir, "embeddings.npy"), self.embeddings_array)
